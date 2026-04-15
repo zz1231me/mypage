@@ -1,0 +1,348 @@
+/* 폰트는 index.html <link>로 로드 (CSS @import보다 빠름) */
+
+/* 디자인 시스템 import */
+@import './design-system.css';
+
+/* Tailwind CSS 지시어 */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========================================
+ * 기본 설정
+ * ======================================== */
+html,
+body,
+#root {
+  @apply h-full w-full;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  color-scheme: light;
+  @apply bg-slate-50 dark:bg-slate-900;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  font-family: var(--font-sans);
+  @apply bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  word-break: keep-all;
+  line-height: 1.65;
+  letter-spacing: -0.01em; /* 한국어 자간 최적화 */
+}
+
+/* ========================================
+ * 스크롤바 — 얇고 절제된 스타일
+ * ======================================== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-neutral-400);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+/* ========================================
+ * 선택 텍스트
+ * ======================================== */
+::selection {
+  background: var(--color-primary-100);
+  color: var(--color-primary-900);
+}
+
+.dark ::selection {
+  background: rgba(99, 102, 241, 0.3);
+  color: var(--color-primary-100);
+}
+
+/* ========================================
+ * 포커스 접근성
+ * ======================================== */
+:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ========================================
+ * 애니메이션
+ * ======================================== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    transform: translateY(-8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.18s ease-out;
+}
+.animate-slideInDown {
+  animation: slideInDown 0.18s ease-out;
+}
+.animate-slideInUp {
+  animation: slideInUp 0.18s ease-out;
+}
+.animate-scaleIn {
+  animation: scaleIn 0.18s ease-out;
+}
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* 접근성: 애니메이션 감소 설정 존중 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ========================================
+ * 컴포넌트 스타일
+ * ======================================== */
+@layer components {
+  /* 레이아웃 */
+  .card {
+    @apply bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-sm;
+  }
+
+  .card-hover {
+    @apply hover:shadow-md transition-shadow duration-200;
+  }
+
+  .page-container {
+    @apply min-h-full bg-slate-50 dark:bg-slate-900;
+  }
+
+  .content-wrapper {
+    @apply max-w-7xl mx-auto px-4 py-6 sm:px-6;
+  }
+
+  /* ── 버튼 ──────────────────────────────── */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2
+           px-5 py-2.5
+           bg-primary-600 hover:bg-primary-700 active:bg-primary-800
+           text-white text-sm font-semibold
+           rounded-lg shadow-sm
+           transition-all duration-150
+           active:scale-[0.98]
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2
+           px-5 py-2.5
+           bg-white dark:bg-slate-800
+           border border-slate-200 dark:border-slate-700
+           text-slate-700 dark:text-slate-300 text-sm font-semibold
+           rounded-lg shadow-sm
+           hover:bg-slate-50 dark:hover:bg-slate-700
+           hover:border-slate-300 dark:hover:border-slate-600
+           active:bg-slate-100 dark:active:bg-slate-700
+           active:scale-[0.98]
+           transition-all duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2
+           px-5 py-2.5
+           bg-red-600 hover:bg-red-700 active:bg-red-800
+           text-white text-sm font-semibold
+           rounded-lg shadow-sm
+           transition-all duration-150
+           active:scale-[0.98]
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2
+           px-4 py-2
+           text-slate-600 dark:text-slate-400 text-sm font-medium
+           rounded-lg
+           hover:bg-slate-100 dark:hover:bg-slate-800
+           hover:text-slate-900 dark:hover:text-slate-200
+           active:bg-slate-200 dark:active:bg-slate-700
+           transition-colors duration-150;
+  }
+
+  /* ── 입력 필드 ─────────────────────────── */
+  .input-field {
+    @apply w-full px-3.5 py-2.5
+           border border-slate-300 dark:border-slate-600
+           rounded-lg
+           bg-white dark:bg-slate-800
+           text-slate-900 dark:text-slate-100 text-base
+           placeholder-slate-400 dark:placeholder-slate-500
+           focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-50 dark:disabled:bg-slate-900
+           transition-colors duration-150;
+  }
+
+  textarea.input-field {
+    @apply leading-relaxed resize-y;
+  }
+
+  /* .input — .input-field 별칭 (하위 호환성) */
+  .input {
+    @apply input-field;
+  }
+
+  /* ── 배지 ──────────────────────────────── */
+  .badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold;
+  }
+
+  .badge-primary {
+    @apply bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400;
+  }
+
+  .badge-success {
+    @apply bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400;
+  }
+
+  .badge-warning {
+    @apply bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400;
+  }
+
+  .badge-danger {
+    @apply bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400;
+  }
+
+  .badge-info {
+    @apply bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400;
+  }
+
+  .badge-gray {
+    @apply bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-400;
+  }
+
+  .badge-red {
+    @apply bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400;
+  }
+
+  /* ── 알림/상태 배너 ────────────────────── */
+  .alert {
+    @apply flex items-start gap-3 p-4 rounded-xl border text-sm;
+  }
+
+  .alert-info {
+    @apply bg-sky-50 dark:bg-sky-900/20 border-sky-200 dark:border-sky-800/60
+           text-sky-800 dark:text-sky-300;
+  }
+
+  .alert-success {
+    @apply bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/60
+           text-green-800 dark:text-green-300;
+  }
+
+  .alert-warning {
+    @apply bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/60
+           text-amber-800 dark:text-amber-300;
+  }
+
+  .alert-danger {
+    @apply bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/60
+           text-red-800 dark:text-red-300;
+  }
+
+  /* ── 시맨틱 텍스트 컬러 ────────────────── */
+  .text-muted {
+    @apply text-slate-400 dark:text-slate-500;
+  }
+
+  .text-subtle {
+    @apply text-slate-500 dark:text-slate-400;
+  }
+
+  .text-body {
+    @apply text-slate-700 dark:text-slate-300;
+  }
+
+  .text-heading {
+    @apply text-slate-900 dark:text-slate-100;
+  }
+}
+
+/* ========================================
+ * 반응형
+ * ======================================== */
+@media (max-width: 768px) {
+  .content-wrapper {
+    @apply px-3 py-4;
+  }
+}

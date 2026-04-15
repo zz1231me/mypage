@@ -1,0 +1,52 @@
+#!/bin/sh
+# pre-commit: TypeScript + ESLint + Prettier 검증 (서버 & 클라이언트)
+
+echo "🔍 Pre-commit 검증 시작..."
+
+# ── 서버 ──
+echo "\n📦 서버: TypeScript 타입 체크..."
+cd server && npx tsc --noEmit
+if [ $? -ne 0 ]; then
+  echo "❌ 서버 TypeScript 오류 발견. 커밋이 취소됩니다."
+  exit 1
+fi
+
+echo "📦 서버: ESLint 검사..."
+npm run lint
+if [ $? -ne 0 ]; then
+  echo "❌ 서버 ESLint 오류 발견. 커밋이 취소됩니다."
+  exit 1
+fi
+
+echo "📦 서버: Prettier 포맷 검사..."
+npm run format:check
+if [ $? -ne 0 ]; then
+  echo "❌ 서버 Prettier 포맷 오류. 'npm run format' 실행 후 다시 커밋하세요."
+  exit 1
+fi
+
+cd ..
+
+# ── 클라이언트 ──
+echo "\n📦 클라이언트: TypeScript 타입 체크..."
+cd client && npx tsc --noEmit
+if [ $? -ne 0 ]; then
+  echo "❌ 클라이언트 TypeScript 오류 발견. 커밋이 취소됩니다."
+  exit 1
+fi
+
+echo "📦 클라이언트: ESLint 검사..."
+npm run lint
+if [ $? -ne 0 ]; then
+  echo "❌ 클라이언트 ESLint 오류 발견. 커밋이 취소됩니다."
+  exit 1
+fi
+
+echo "📦 클라이언트: Prettier 포맷 검사..."
+npm run format:check
+if [ $? -ne 0 ]; then
+  echo "❌ 클라이언트 Prettier 포맷 오류. 'npm run format' 실행 후 다시 커밋하세요."
+  exit 1
+fi
+
+echo "\n✅ Pre-commit 검증 완료!"

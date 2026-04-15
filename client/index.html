@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Myhome - 보안 게시판 시스템</title>
+    
+    <!-- ✅ SEO Meta Tags -->
+    <meta name="description" content="Myhome - 안전하고 빠른 보안 게시판 시스템. 팀 협업을 위한 최적의 플랫폼." />
+    <meta name="keywords" content="게시판, 협업, 보안, Myhome" />
+    <meta name="author" content="Myhome Team" />
+
+    <!-- ✅ Open Graph Meta Tags (기본값 - 동적 업데이트는 PostDetail에서 수행) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Myhome" />
+    <meta property="og:title" content="Myhome - 보안 게시판 시스템" />
+    <meta property="og:description" content="Myhome - 안전하고 빠른 보안 게시판 시스템. 팀 협업을 위한 최적의 플랫폼." />
+    <meta property="og:locale" content="ko_KR" />
+    
+    <!-- ✅ Pretendard Variable — 한국어 최적화 무료 폰트 (dynamic subset → 빠른 로딩) -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+    <link rel="stylesheet" as="style" crossorigin
+      href="https://cdn.jsdelivr.net/npm/pretendard@latest/dist/web/variable/pretendardvariable-dynamic-subset.css" />
+
+    <!-- ✅ Theme Color for Mobile -->
+    <meta name="theme-color" content="#3B82F6" />
+    
+    <!-- ✅ Content Security Policy (XSS Prevention) -->
+    <meta http-equiv="Content-Security-Policy" 
+          content="default-src 'self';
+                   script-src 'self' 'unsafe-inline' 'unsafe-eval';
+                   style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
+                   font-src 'self' https://cdn.jsdelivr.net;
+                   img-src 'self' data: blob: https:;
+                   connect-src 'self' http://localhost:* https://localhost:* ws://localhost:*;" />
+    
+    <!-- ✅ X-Content-Type-Options -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    
+    <!-- ✅ Referrer Policy -->
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

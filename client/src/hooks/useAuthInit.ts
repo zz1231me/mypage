@@ -1,0 +1,173 @@
+// client/src/hooks/useAuthInit.ts
+import { useEffect, useRef } from 'react';
+import { useAuth } from '../store/auth';
+import { getCurrentUser, refreshToken } from '../api/auth';
+
+const devLog = (...args: unknown[]) => {
+  if (import.meta.env.DEV) console.info(...args);
+};
+const devWarn = (...args: unknown[]) => {
+  if (import.meta.env.DEV) console.warn(...args);
+};
+const devError = (...args: unknown[]) => {
+  if (import.meta.env.DEV) console.error(...args);
+};
+
+/**
+ * 앱 시작 시 인증 상태를 초기화하는 훅
+ * 쿠키에 토큰이 있으면 자동으로 사용자 정보를 가져와서 로그인 상태로 설정
+ * localStorage에서 토큰 정보를 복원하고 만료 상태를 체크하여 자동 갱신
+ */
+export const useAuthInit = () => {
+  const { setUser, clearUser, setLoading, isLoading } = useAuth();
+
+  // ✅ useRef로 초기화 여부 관리 - 전역 window 오염 없이 컴포넌트 수준에서 중복 실행 방지
+  const isInitializedRef = useRef(false);
+
+  useEffect(() => {
+    // ✅ useRef 플래그로 초기화 상태 확인
+    if (isInitializedRef.current) {
+      devLog('ℹ️ 인증 초기화 이미 진행 중 (useRef 플래그), 스킵');
+      return;
+    }
+
+    devLog('🔄 인증 초기화 시작 준비...');
+    isInitializedRef.current = true; // useRef 플래그 설정
+
+    let isCompleted = false;
+
+    const initializeAuth = async () => {
+      devLog('🔄 인증 상태 초기화 시작...');
+      setLoading(true);
+
+      try {
+        // ✅ 1단계: 서버에서 현재 사용자 정보 조회 (쿠키 기반)
+        devLog('📡 /api/auth/me 호출 시작...');
+
+        try {
+          const response = await getCurrentUser();
+          devLog('✅ /api/auth/me 응답 받음:', response);
+
+          // sendSuccess 구조: { success, data: { user, tokenInfo } }
+          const userData = response.data?.user;
+          const tokenInfoData = response.data?.tokenInfo;
+
+          // ✅ 사용자 정보 설정
+          if (userData) {
+            // ✅ 서버에서 tokenInfo를 반환하므로 이를 우선 사용
+            if (tokenInfoData) {
+              setUser(userData, tokenInfoData);
+              devLog('✅ 서버에서 받은 토큰 정보로 인증 성공:', userData.name);
+            } else {
+              // localStorage에서 토큰 정보 복원 시도 (fallback)
+              const storedTokenInfo = localStorage.getItem('tokenInfo');
+
+              if (storedTokenInfo) {
+                try {
+                  const tokenInfo = JSON.parse(storedTokenInfo);
+
+                  // ✅ Refresh Token이 유효한지만 체크
+                  if (tokenInfo.refreshTokenExpiry > Date.now()) {
+                    setUser(userData, tokenInfo);
+                    devLog('✅ 저장된 토큰 정보로 인증 성공:', userData.name);
+                  } else {
+                    devLog('⚠️ 저장된 Refresh Token 만료, 토큰 정보 없이 설정');
+                    setUser(userData);
+                  }
+                } catch (parseError) {
+                  devError('❌ 토큰 정보 파싱 실패:', parseError);
+                  localStorage.removeItem('tokenInfo'); // 손상된 데이터 제거
+                  setUser(userData);
+                }
+              } else {
+                // ✅ localStorage에 토큰 정보 없으면 사용자 정보만 설정
+                devLog('ℹ️ 저장된 토큰 정보 없음, 사용자 정보만 설정');
+                setUser(userData);
+              }
+            }
+
+            devLog('✅ 인증 상태 복원 성공:', userData.name);
+            devLog('🔐 사용자 역할:', userData.roleInfo?.name || '알 수 없음');
+            return;
+          } else {
+            devWarn('⚠️ 서버 응답에 user 정보 없음');
+            clearUser();
+          }
+        } catch (getCurrentError: unknown) {
+          devError('❌ /api/auth/me 호출 실패:', getCurrentError);
+
+          // ✅ 401 또는 419 에러 → Access Token 만료, Refresh 시도
+          const axiosError = getCurrentError as { response?: { status?: number }; status?: number };
+          const statusCode = axiosError.response?.status || axiosError.status;
+          if (statusCode === 401 || statusCode === 419) {
+            devLog('🔄 Access Token 만료 감지, Refresh Token으로 갱신 시도...');
+
+            try {
+              const refreshResponse = await refreshToken();
+              devLog('✅ Refresh Token 응답 받음:', refreshResponse);
+
+              // sendSuccess 구조: { success, data: { user, tokenInfo } }
+              const refreshUser = refreshResponse.data?.user;
+              const refreshTokenInfo = refreshResponse.data?.tokenInfo;
+              if (refreshUser && refreshTokenInfo) {
+                setUser(refreshUser, refreshTokenInfo);
+                devLog('✅ Refresh Token으로 인증 성공:', refreshUser.name);
+                return;
+              } else {
+                devWarn('⚠️ Refresh Token 응답에 user/tokenInfo 없음');
+                clearUser();
+              }
+            } catch (refreshError) {
+              devError('❌ Refresh Token 갱신 실패:', refreshError);
+              // Refresh 실패 → 로그아웃
+              clearUser();
+              return;
+            }
+          } else {
+            // ✅ 기타 에러 → 로그아웃
+            devLog('❌ 인증 실패, 로그아웃 처리');
+            clearUser();
+          }
+        }
+      } catch (error) {
+        devError('❌ 인증 초기화 중 예외 발생:', error);
+        clearUser();
+      } finally {
+        setLoading(false);
+        isCompleted = true;
+        devLog('✅ 인증 상태 초기화 완료 (finally 블록)');
+      }
+    };
+
+    // ✅ 초기화 함수를 비동기로 실행하되, 타임아웃 추가 (15초 제한)
+    const timeoutId = setTimeout(() => {
+      if (!isCompleted) {
+        devError('인증 초기화 타임아웃 (15초), 강제 종료');
+        clearUser();
+        setLoading(false);
+        // 플래그는 true로 유지: 타임아웃 후 재마운트 시 이중 초기화 방지
+      }
+    }, 15000);
+
+    // 초기화 함수 실행
+    initializeAuth().finally(() => {
+      clearTimeout(timeoutId);
+      devLog('🏁 initializeAuth 완료');
+      // 성공적으로 완료되면 플래그는 true로 유지 (재초기화 방지)
+    });
+
+    // ✅ Cleanup 함수 - StrictMode 이중 렌더링 대응
+    return () => {
+      devLog('🧹 useAuthInit cleanup 실행');
+      // ✅ cleanup에서는 타이머만 정리하고 플래그는 유지
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      // 플래그는 초기화 완료 후에도 유지되어야 함 (재초기화 방지)
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // ✅ 빈 배열 - 마운트 시 한 번만 실행
+
+  // 로딩 상태 반환 (컴포넌트에서 사용할 수 있도록)
+  return { isLoading };
+};
