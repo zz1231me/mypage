@@ -75,7 +75,7 @@ export default defineConfig(({ mode }) => {
     },
     
     server: {
-      host: '127.0.0.1',
+      host: '0.0.0.0',
       port: 8080,
       strictPort: true,
       hmr: {
@@ -177,7 +177,7 @@ export default defineConfig(({ mode }) => {
     },
     
     preview: {
-      host: '127.0.0.1',
+      host: '0.0.0.0',
       port: 8080,
       strictPort: true,
       open: false,

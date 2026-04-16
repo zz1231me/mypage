@@ -188,8 +188,8 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
       userSessionService.expireSession(refreshToken).catch(() => {});
     }
 
-    res.clearCookie('access_token');
-    res.clearCookie('refresh_token');
+    res.clearCookie('access_token', { path: '/' });
+    res.clearCookie('refresh_token', { path: '/' });
     logSuccess('로그아웃 성공');
     res.status(204).send();
   } catch (err) {

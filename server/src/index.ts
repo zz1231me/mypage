@@ -305,18 +305,49 @@ app.use(
   })
 );
 
+// CORS_ALLOW_ALL=true 이면 모든 origin 허용 (사내 인트라넷 전용 배포 시 사용)
+const CORS_ALLOW_ALL = process.env.CORS_ALLOW_ALL === 'true';
+
+// 표준 사설망 IP 대역 (192.168.x.x / 10.x.x.x / 172.16-31.x.x)
+const PRIVATE_NETWORK_REGEX =
+  /^https?:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(:\d+)?$/;
+
+// 회사 전용 IP 대역 패턴 — 환경변수로 추가 가능
+// 예: CORS_IP_PATTERN=^https?:\/\/20\.\d+\.\d+\.\d+(:\d+)?$
+const CORS_IP_PATTERN = process.env.CORS_IP_PATTERN
+  ? new RegExp(process.env.CORS_IP_PATTERN)
+  : null;
+
+const LOCALHOST_ORIGINS = [
+  'http://localhost',
+  'http://localhost:80',
+  'http://localhost:5173',
+  'http://localhost:8080',
+  'http://127.0.0.1',
+  'http://127.0.0.1:80',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:8080',
+];
+
+// 추가 허용 origin 목록 — 환경변수로 지정 (예: CORS_ORIGINS=https://example.com,http://10.0.1.5:8080)
+const EXTRA_ORIGINS = (process.env.CORS_ORIGINS || '')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
+
 app.use(
   cors({
-    origin: [
-      'http://localhost',
-      'http://localhost:80',
-      'http://localhost:5173', // ✅ Vite 기본 포트
-      'http://localhost:8080',
-      'http://127.0.0.1',
-      'http://127.0.0.1:80',
-      'http://127.0.0.1:5173', // ✅ Vite 기본 포트
-      'http://127.0.0.1:8080',
-    ],
+    origin: (origin, callback) => {
+      // origin 없는 요청(서버간 호출, curl 등) 허용
+      if (!origin) return callback(null, true);
+      // 전체 허용 모드 (사내 인트라넷 전용 환경)
+      if (CORS_ALLOW_ALL) return callback(null, true);
+      if (LOCALHOST_ORIGINS.includes(origin)) return callback(null, true);
+      if (PRIVATE_NETWORK_REGEX.test(origin)) return callback(null, true);
+      if (CORS_IP_PATTERN?.test(origin)) return callback(null, true);
+      if (EXTRA_ORIGINS.includes(origin)) return callback(null, true);
+      callback(new Error(`CORS 차단: ${origin}`));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
