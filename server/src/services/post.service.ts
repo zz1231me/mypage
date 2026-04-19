@@ -21,7 +21,7 @@ import { AppError } from '../middlewares/error.middleware';
 import { extractTextFromTiptap } from '../utils/tiptapRenderer';
 import { sequelize } from '../config/sequelize';
 import { logError } from '../utils/logger';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import path from 'path';
 import fs from 'fs';
 
@@ -716,14 +716,6 @@ export class PostService extends BaseService {
     const post = await Post.findByPk(postId);
     if (!post) throw new AppError(404, '게시글을 찾을 수 없습니다.');
 
-    // 낙관적 잠금: 클라이언트 버전이 DB 버전과 다르면 409
-    if (version !== undefined && post.version !== version) {
-      throw new AppError(
-        409,
-        '다른 사용자가 이미 이 게시글을 수정했습니다. 페이지를 새로고침 후 다시 시도해주세요.'
-      );
-    }
-
     const isOwner = userId === post.UserId;
     const board = await Board.findByPk(post.boardType);
 
@@ -731,7 +723,7 @@ export class PostService extends BaseService {
       throw new AppError(404, '게시판을 찾을 수 없습니다.');
     }
 
-    // Ownership/Permission Logic
+    // 권한 확인을 낙관적 잠금보다 먼저 수행 (권한 없는 접근은 409 전에 차단)
     if (board.isPersonal) {
       if (!isOwner) throw new AppError(403, '개인공간의 게시글은 작성자만 수정할 수 있습니다.');
     } else {
@@ -745,6 +737,14 @@ export class PostService extends BaseService {
           throw new AppError(403, '게시글 수정 권한이 없습니다.');
         }
       }
+    }
+
+    // 낙관적 잠금: version 미전송 시 0으로 간주 (수정된 글은 반드시 version 포함 필요)
+    if (post.version !== (version ?? 0)) {
+      throw new AppError(
+        409,
+        '다른 사용자가 이미 이 게시글을 수정했습니다. 페이지를 새로고침 후 다시 시도해주세요.'
+      );
     }
 
     if (!title || !content || title.trim().length === 0 || content.trim().length === 0) {
@@ -913,7 +913,7 @@ export class PostService extends BaseService {
     if (!post) throw new AppError(404, '게시글을 찾을 수 없습니다.');
 
     // admin은 무조건 허용
-    if (userRole !== 'admin') {
+    if (userRole !== ROLES.ADMIN) {
       // manager 또는 일반 유저는 해당 게시판 담당자 여부 확인
       const isManager = await BoardManager.findOne({
         where: { boardId: post.boardType, userId },

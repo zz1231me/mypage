@@ -145,7 +145,6 @@ CommentModel.init(
       defaultValue: 0,
       validate: {
         min: 0,
-        max: 3,
       },
       comment: '댓글 깊이',
     },

@@ -1,12 +1,12 @@
 // client/src/components/BoardProtectedRoute.tsx
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, type ReactElement } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { useAuth } from '../store/auth';
 import { useAccessibleBoards } from '../hooks/useAccessibleBoards';
 import { checkUserBoardAccess } from '../api/boards';
 
 interface Props {
-  children: JSX.Element;
+  children: ReactElement;
   action?: 'read' | 'write' | 'delete';
 }
 

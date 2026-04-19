@@ -1,11 +1,12 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
+
 import { userSessionService } from '../services/userSession.service';
 import { auditLogService } from '../services/auditLog.service';
 import { sendSuccess, sendError, sendNotFound } from '../utils/response';
 import { logError } from '../utils/logger';
 import { invalidateUserCache } from '../middlewares/auth.middleware';
 import { User } from '../models/User';
-import type { AuthRequest } from '../types/auth-request';
+import { FlatRequest as Request, type AuthRequest } from '../types/auth-request';
 
 export const getUserSessions = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -51,7 +52,7 @@ export const forceLogoutSession = async (req: Request, res: Response): Promise<v
         afterValue: { sessionId, forcedAt: new Date().toISOString() },
         ipAddress: req.ip ?? null,
       })
-      .catch(() => {});
+      .catch(err => logError('감사 로그 기록 실패 (강제 로그아웃)', err));
 
     sendSuccess(res, null, '세션이 강제 종료되었습니다.');
   } catch (error) {

@@ -1,12 +1,111 @@
 /* 폰트는 index.html <link>로 로드 (CSS @import보다 빠름) */
 
-/* 디자인 시스템 import */
+/* 디자인 시스템 import — CSS vars (@import must precede other rules) */
 @import './design-system.css';
 
-/* Tailwind CSS 지시어 */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind v4: single import replaces @tailwind base/components/utilities */
+@import 'tailwindcss';
+
+/* Tailwind v4: class-based dark mode (equivalent to v3 darkMode: 'class') */
+@variant dark (&:is(.dark *));
+
+/* Tailwind v4: typography plugin */
+@plugin '@tailwindcss/typography';
+
+/* ============================================================
+ * Tailwind v4 @theme — replaces tailwind.config.js theme.extend
+ * These CSS vars are auto-exposed as utilities (bg-primary-500, etc.)
+ * and also override Tailwind's built-in defaults where they conflict.
+ * ============================================================ */
+@theme {
+  /* ── Primary: Indigo-Blue ── */
+  --color-primary-50: #eef2ff;
+  --color-primary-100: #e0e7ff;
+  --color-primary-200: #c7d2fe;
+  --color-primary-300: #a5b4fc;
+  --color-primary-400: #818cf8;
+  --color-primary-500: #6366f1;
+  --color-primary-600: #4f46e5;
+  --color-primary-700: #4338ca;
+  --color-primary-800: #3730a3;
+  --color-primary-900: #312e81;
+  --color-primary-950: #1e1b4b;
+
+  /* ── Secondary: Violet ── */
+  --color-secondary-50: #faf5ff;
+  --color-secondary-100: #f3e8ff;
+  --color-secondary-200: #e9d5ff;
+  --color-secondary-300: #d8b4fe;
+  --color-secondary-400: #c084fc;
+  --color-secondary-500: #a855f7;
+  --color-secondary-600: #9333ea;
+  --color-secondary-700: #7e22ce;
+  --color-secondary-800: #6b21a8;
+  --color-secondary-900: #581c87;
+
+  /* ── Neutral: Slate ── */
+  --color-neutral-50: #f8fafc;
+  --color-neutral-100: #f1f5f9;
+  --color-neutral-200: #e2e8f0;
+  --color-neutral-300: #cbd5e1;
+  --color-neutral-400: #94a3b8;
+  --color-neutral-500: #64748b;
+  --color-neutral-600: #475569;
+  --color-neutral-700: #334155;
+  --color-neutral-800: #1e293b;
+  --color-neutral-850: #172032;
+  --color-neutral-900: #0f172a;
+  --color-neutral-950: #020617;
+
+  /* ── Font families ── */
+  --font-sans:
+    'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto,
+    'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  --font-mono:
+    'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, 'Liberation Mono', 'Courier New', monospace;
+
+  /* ── Font sizes (with line-height companions) ── */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.3125rem;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.5625rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.625rem;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.875rem;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl: 1.875rem;
+  --text-3xl--line-height: 2.375rem;
+  --text-4xl: 2.25rem;
+  --text-4xl--line-height: 2.75rem;
+
+  /* ── Box shadows ── */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.06);
+  --shadow: 0 2px 4px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.06);
+  --shadow-md: 0 4px 8px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --shadow-lg: 0 10px 20px -3px rgb(0 0 0 / 0.08), 0 4px 8px -4px rgb(0 0 0 / 0.04);
+  --shadow-xl: 0 20px 30px -5px rgb(0 0 0 / 0.08), 0 8px 12px -6px rgb(0 0 0 / 0.04);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.18);
+
+  /* ── Border radius ── */
+  --radius-sm: 0.25rem;
+  --radius: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 2rem;
+
+  /* ── Spacing extras ── */
+  --spacing-13: 3.25rem;
+  --spacing-15: 3.75rem;
+  --spacing-18: 4.5rem;
+}
 
 /* ========================================
  * 기본 설정
@@ -241,7 +340,9 @@ body {
   }
 
   /* ── 입력 필드 ─────────────────────────── */
-  .input-field {
+  /* Tailwind v4: @apply는 utility 클래스만 가능 — .input과 .input-field를 동일 규칙으로 합침 */
+  .input-field,
+  .input {
     @apply w-full px-3.5 py-2.5
            border border-slate-300 dark:border-slate-600
            rounded-lg
@@ -253,13 +354,9 @@ body {
            transition-colors duration-150;
   }
 
-  textarea.input-field {
+  textarea.input-field,
+  textarea.input {
     @apply leading-relaxed resize-y;
-  }
-
-  /* .input — .input-field 별칭 (하위 호환성) */
-  .input {
-    @apply input-field;
   }
 
   /* ── 배지 ──────────────────────────────── */

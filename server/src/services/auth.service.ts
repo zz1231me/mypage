@@ -2,7 +2,7 @@ import { BaseService } from './base.service';
 import { User, UserInstance } from '../models/User';
 import { Role } from '../models/Role';
 import { AppError } from '../middlewares/error.middleware';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { getBcryptRounds, getSettings } from '../utils/settingsCache';
 import jwt from 'jsonwebtoken';
 import Board from '../models/Board';
@@ -14,7 +14,7 @@ import { securityLogService } from './securityLog.service';
 import { loginHistoryService } from './loginHistory.service';
 import { userSessionService } from './userSession.service';
 import { notificationService } from './notification.service';
-import { logWarning } from '../utils/logger';
+import { logWarning, logError } from '../utils/logger';
 
 // Types
 export interface UserPayload {
@@ -75,6 +75,7 @@ export class AuthService extends BaseService {
           ownerId: user.id,
           isActive: true,
         },
+        attributes: ['id', 'name'],
       }),
     ]);
 
@@ -152,7 +153,7 @@ export class AuthService extends BaseService {
           status: 'FAILURE',
           details: { reason: 'Account locked' },
         })
-        .catch(() => {});
+        .catch(err => logError('로그인 차단 보안 로그 실패', err));
       loginHistoryService
         .createLoginRecord({
           userId: user.id,
@@ -163,7 +164,7 @@ export class AuthService extends BaseService {
           status: 'locked',
           failureReason: '계정 잠금 상태',
         })
-        .catch(() => {});
+        .catch(err => logError('로그인 차단 이력 기록 실패', err));
       throw new AppError(403, '계정이 잠겨있습니다. 나중에 다시 시도해주세요.');
     }
 
@@ -188,7 +189,7 @@ export class AuthService extends BaseService {
           status: 'FAILURE',
           details: { reason: 'Invalid password' },
         })
-        .catch(() => {});
+        .catch(err => logError('로그인 실패 보안 로그 실패', err));
       loginHistoryService
         .createLoginRecord({
           userId: user.id,
@@ -199,7 +200,7 @@ export class AuthService extends BaseService {
           status: 'failed',
           failureReason: '비밀번호 불일치',
         })
-        .catch(() => {});
+        .catch(err => logError('로그인 실패 이력 기록 실패', err));
       // 계정이 잠긴 경우에만 알림 (매 실패마다 알림 스팸 방지)
       if (user.isLocked()) {
         notificationService
@@ -209,7 +210,7 @@ export class AuthService extends BaseService {
             message: `🔒 비밀번호 오류 5회 초과로 계정이 30분 동안 잠겼습니다. 본인이 아닌 경우 비밀번호를 변경하세요.`,
             link: '/profile',
           })
-          .catch(() => {});
+          .catch(err => logError('계정 잠금 알림 실패', err));
       }
       throw new AppError(401, '아이디 및 비밀번호가 틀렸습니다.');
     }
@@ -276,7 +277,7 @@ export class AuthService extends BaseService {
           message: `🔔 새로운 IP(${ipAddress})에서 로그인이 감지되었습니다. 본인이 아닌 경우 즉시 비밀번호를 변경하세요.`,
           link: '/profile',
         })
-        .catch(() => {});
+        .catch(err => logError('새 IP 로그인 알림 실패', err));
     }
 
     securityLogService
@@ -289,7 +290,7 @@ export class AuthService extends BaseService {
         status: 'SUCCESS',
         details: fingerprint ? { fingerprint } : undefined,
       })
-      .catch(() => {});
+      .catch(err => logError('로그인 성공 보안 로그 실패', err));
 
     loginHistoryService
       .createLoginRecord({
@@ -300,7 +301,7 @@ export class AuthService extends BaseService {
         userAgent,
         status: 'success',
       })
-      .catch(() => {});
+      .catch(err => logError('로그인 성공 이력 기록 실패', err));
 
     userSessionService
       .createSession({
@@ -309,7 +310,7 @@ export class AuthService extends BaseService {
         ipAddress,
         userAgent,
       })
-      .catch(() => {});
+      .catch(err => logError('세션 생성 실패', err));
 
     return { user, accessToken, refreshToken, payload };
   }
@@ -346,7 +347,10 @@ export class AuthService extends BaseService {
       if (!user.roleInfo?.isActive) throw new AppError(403, '비활성화된 역할입니다.');
 
       // tokenVersion 검증: 로그아웃 후 기존 토큰 무효화
-      if (decoded.tv !== undefined && decoded.tv !== (user.tokenVersion ?? 0)) {
+      // decoded.tv가 없는 구형 토큰이면서 tokenVersion이 이미 증가된 경우도 거부
+      const dbTv = user.tokenVersion ?? 0;
+      const tvMismatch = decoded.tv === undefined ? dbTv > 0 : decoded.tv !== dbTv;
+      if (tvMismatch) {
         throw new AppError(401, '만료된 토큰입니다. 다시 로그인해주세요.');
       }
 
@@ -367,9 +371,12 @@ export class AuthService extends BaseService {
         { expiresIn: `${refreshDays}d`, algorithm: 'HS256' }
       );
 
-      // 세션 토큰 교체 + 활동 시각 갱신 (fire-and-forget)
+      // 세션 토큰 교체 + 활동 시각 갱신
       // 구 refresh token → 신 refresh token 으로 DB 세션을 교체해야 다음 갱신에서도 추적 가능
-      userSessionService.rotateSession(token, newRefreshToken).catch(() => {});
+      // 실패 시 에러 로깅만 하고 토큰은 정상 반환 (세션 추적 실패가 로그인 실패는 아님)
+      await userSessionService
+        .rotateSession(token, newRefreshToken)
+        .catch(err => logError('세션 토큰 교체 실패 (토큰 갱신은 정상 완료)', err));
 
       return {
         user,
@@ -453,8 +460,8 @@ export class AuthService extends BaseService {
 
     const hashedPassword = await bcrypt.hash(newPassword, getBcryptRounds());
     user.password = hashedPassword;
-    user.passwordResetToken = null as any;
-    user.passwordResetExpires = null as any;
+    user.passwordResetToken = null;
+    user.passwordResetExpires = null;
     // ✅ 이미 해싱된 값이므로 beforeUpdate 훅에서 재해싱 건너뜀 (hooks: false 대신 플래그 사용)
     user._skipPasswordHash = true;
     await user.save();
@@ -507,6 +514,7 @@ export class AuthService extends BaseService {
 
     const personalBoard = await Board.findOne({
       where: { isPersonal: true, ownerId: userId, isActive: true },
+      attributes: ['id', 'name'],
     });
 
     return {

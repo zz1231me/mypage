@@ -1,7 +1,8 @@
+import { type ReactElement } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../store/auth';
 
-const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
+const ProtectedRoute = ({ children }: { children: ReactElement }) => {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {

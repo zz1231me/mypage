@@ -11,7 +11,7 @@ import {
   NonAttribute,
 } from 'sequelize';
 import { sequelize } from '../config/sequelize';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { getBcryptRounds, getSettings, getPasswordResetTokenMs } from '../utils/settingsCache';
 import crypto from 'crypto';
 import { logInfo, logError, logSuccess } from '../utils/logger';

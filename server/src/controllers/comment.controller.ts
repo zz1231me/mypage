@@ -22,7 +22,7 @@ export const createComment = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { postId } = req.params;
+    const { boardType, postId } = req.params;
     const { content, parentId } = req.body;
     const userId = req.user?.id;
 
@@ -51,6 +51,14 @@ export const createComment = async (
       attributes: ['id', 'UserId', 'title', 'boardType'],
     });
     if (!post) {
+      sendNotFound(res, '게시글');
+      return;
+    }
+
+    // ✅ URL의 boardType과 실제 게시글의 boardType 일치 여부 검증
+    // 미들웨어(checkWriteAccess)는 URL 파라미터로만 권한을 확인하므로,
+    // boardType을 조작해 다른 게시판 포스트에 댓글을 다는 공격을 차단
+    if (post.boardType !== boardType) {
       sendNotFound(res, '게시글');
       return;
     }

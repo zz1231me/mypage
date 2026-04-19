@@ -1,5 +1,5 @@
 // server/src/middlewares/rate-limit.middleware.ts
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { logWarning } from '../utils/logger';
 import { env } from '../config/env';
 import { RATE_LIMIT } from '../config/constants';
@@ -13,12 +13,12 @@ export const apiLimiter = rateLimit({
     success: false,
     message: '너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요.',
   },
-  standardHeaders: true,
+  standardHeaders: 'draft-6',
   legacyHeaders: false,
   keyGenerator: req => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const userId = (req as any).user?.id;
-    return userId ? `user:${userId}` : req.ip || 'unknown';
+    return userId ? `user:${userId}` : ipKeyGenerator(req.ip ?? '');
   },
   handler: (req, res) => {
     logWarning('Rate limit 초과', { ip: req.ip });
@@ -69,6 +69,7 @@ export const uploadLimiter = rateLimit({
 });
 
 // 비밀글 비밀번호 인증 제한 (IP + userId 기준)
+// skipSuccessfulRequests 미사용: 정답을 섞어 카운터를 리셋하는 brute-force 우회를 방지
 export const secretPostLimiter = rateLimit({
   windowMs: RATE_LIMIT.SECRET_POST_WINDOW_MS,
   max: RATE_LIMIT.SECRET_POST_MAX,
@@ -78,9 +79,8 @@ export const secretPostLimiter = rateLimit({
     const postId = req.params?.id || 'unknown';
     return userId
       ? `secret-verify:user:${userId}:post:${postId}`
-      : `secret-verify:ip:${req.ip || 'unknown'}:post:${postId}`;
+      : `secret-verify:ip:${ipKeyGenerator(req.ip ?? '')}:post:${postId}`;
   },
-  skipSuccessfulRequests: true,
   handler: (req, res) => {
     logWarning('비밀글 비밀번호 brute-force 시도', { ip: req.ip, postId: req.params?.id });
     res.status(429).json({
@@ -97,7 +97,7 @@ export const downloadLimiter = rateLimit({
   keyGenerator: req => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const userId = (req as any).user?.id;
-    return userId ? `download:user:${userId}` : `download:ip:${req.ip || 'unknown'}`;
+    return userId ? `download:user:${userId}` : `download:ip:${ipKeyGenerator(req.ip ?? '')}`;
   },
   message: {
     success: false,

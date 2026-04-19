@@ -1,10 +1,11 @@
 // client/src/components/ThemeToggle.tsx
+import { type ReactElement } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
 
-  const themes: Array<{ value: 'light' | 'dark' | 'system'; label: string; icon: JSX.Element }> = [
+  const themes: Array<{ value: 'light' | 'dark' | 'system'; label: string; icon: ReactElement }> = [
     {
       value: 'light',
       label: '라이트',

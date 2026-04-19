@@ -1,11 +1,12 @@
 // client/src/components/Dashboard/BoardIcon.tsx
+import { type ReactElement } from 'react';
 
 interface BoardIconProps {
   boardId: string;
 }
 
 export function BoardIcon({ boardId }: BoardIconProps) {
-  const iconMap: Record<string, JSX.Element> = {
+  const iconMap: Record<string, ReactElement> = {
     notice: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path

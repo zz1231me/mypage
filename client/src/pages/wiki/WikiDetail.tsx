@@ -246,7 +246,7 @@ function WikiContentRenderer({
   contentRef,
 }: {
   content: string;
-  contentRef: React.RefObject<HTMLDivElement>;
+  contentRef: React.RefObject<HTMLDivElement | null>;
 }) {
   const sanitized = sanitizeHTML(content);
   return (

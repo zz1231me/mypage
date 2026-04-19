@@ -30,8 +30,7 @@
     /* ✅ TypeScript 5.8: 성능 최적화 */
     "incremental": true,
     
-    /* Path Alias - Tiptap UI Components */
-    "baseUrl": ".",
+    /* Path Alias */
     "paths": {
       "@/*": ["./src/*"]
     }

@@ -67,7 +67,7 @@ router.get(
   authenticate as RequestHandler,
   downloadLimiter as RequestHandler,
   asyncHandler(async (req, res) => {
-    const { filename } = req.params;
+    const { filename } = req.params as Record<string, string>;
     const originalName = req.query.originalName as string;
 
     const resolvedFilePath = resolveSecureFilePath(filename, filesDir);
@@ -143,7 +143,7 @@ router.get(
   '/info/:filename',
   authenticate as RequestHandler,
   asyncHandler(async (req, res) => {
-    const { filename } = req.params;
+    const { filename } = req.params as Record<string, string>;
 
     const resolvedFilePath = resolveSecureFilePath(filename, filesDir);
     if (!resolvedFilePath) {
@@ -252,7 +252,7 @@ router.delete(
       return;
     }
 
-    const { type, filename } = req.params;
+    const { type, filename } = req.params as Record<string, string>;
     if (!['file', 'image'].includes(type)) {
       sendError(res, 400, '유효하지 않은 파일 타입입니다.');
       return;

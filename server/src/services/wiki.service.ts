@@ -91,6 +91,14 @@ export class WikiService extends BaseService {
         if (Number(data.parentId) === Number(page.id)) {
           throw new AppError(400, '자기 자신을 상위 페이지로 설정할 수 없습니다.');
         }
+        // parentId가 실제로 존재하는 페이지인지 검증
+        const parentExists = await WikiPage.findByPk(data.parentId, {
+          attributes: ['id'],
+          transaction: t,
+        });
+        if (!parentExists) {
+          throw new AppError(404, '상위 페이지를 찾을 수 없습니다.');
+        }
         // 간접 순환 참조 방지: 새 parentId의 상위 체인을 따라가며 현재 페이지가 나오는지 확인
         const visited = new Set<number>();
         let currentId: number | null = Number(data.parentId);

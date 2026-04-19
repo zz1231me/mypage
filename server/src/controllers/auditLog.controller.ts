@@ -1,4 +1,5 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { FlatRequest as Request } from '../types/auth-request';
 import { auditLogService } from '../services/auditLog.service';
 import { sendSuccess, sendError } from '../utils/response';
 import { logError } from '../utils/logger';

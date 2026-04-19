@@ -33,4 +33,4 @@ const localStorageMock = {
 Object.defineProperty(window, 'localStorage', { value: localStorageMock });
 
 // fetch 기본 모킹
-global.fetch = vi.fn();
+globalThis.fetch = vi.fn() as typeof fetch;

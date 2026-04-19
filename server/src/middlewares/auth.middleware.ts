@@ -114,7 +114,12 @@ export const authenticate = async (
     }
 
     // tokenVersion 검증: 로그아웃 후 기존 토큰 무효화
-    if (decoded.tv !== undefined && decoded.tv !== cachedUser.tokenVersion) {
+    // decoded.tv가 없는 구형 토큰이면서 tokenVersion이 이미 증가된 경우(로그아웃 이력)도 거부
+    const tvMismatch =
+      decoded.tv === undefined
+        ? cachedUser.tokenVersion > 0
+        : decoded.tv !== cachedUser.tokenVersion;
+    if (tvMismatch) {
       logWarning(`인증 실패: 무효화된 토큰 (userId: ${cachedUser.id})`);
       sendUnauthorized(res, '만료된 토큰입니다. 다시 로그인해주세요.');
       return;
@@ -228,7 +233,11 @@ export const optionalAuthenticate = async (
     }
 
     // tokenVersion 불일치 시 로그아웃된 토큰으로 간주하여 비인증 상태로 처리
-    const tokenVersionValid = decoded.tv === undefined || decoded.tv === cachedUser.tokenVersion;
+    // decoded.tv가 없는 구형 토큰이면서 tokenVersion이 이미 증가된 경우도 무효 처리
+    const tokenVersionValid =
+      decoded.tv === undefined
+        ? cachedUser.tokenVersion === 0
+        : decoded.tv === cachedUser.tokenVersion;
 
     if (
       !cachedUser.isDeleted &&

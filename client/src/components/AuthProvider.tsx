@@ -27,7 +27,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   } = useAuth();
 
   const { isLoading } = useAuthInit();
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isRefreshing = useRef(false); // ✅ 토큰 갱신 중 플래그 추가
 
   // 🔄 스마트한 백그라운드 토큰 갱신 설정 (개선됨)
@@ -128,7 +128,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       {children}
 
       {/* 개발 환경에서만 보이는 인증 상태 디버깅 정보 */}
-      {process.env.NODE_ENV === 'development' && (
+      {import.meta.env.DEV && (
         <div className="fixed bottom-4 right-4 bg-black bg-opacity-75 text-white p-2 rounded text-xs z-50">
           <div>🔐 Login : {isAuthenticated ? '✅' : '❌'}</div>
           {user && (

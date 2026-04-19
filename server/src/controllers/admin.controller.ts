@@ -1,6 +1,7 @@
 // src/controllers/admin.controller.ts - Service Layer 완전 적용
-import { Request, Response } from 'express';
-import ExcelJS from 'exceljs';
+import { Response } from 'express';
+
+import XLSX from 'xlsx-js-style';
 import { userService } from '../services/user.service';
 import { boardService } from '../services/board.service';
 import { roleService } from '../services/role.service';
@@ -11,7 +12,7 @@ import { SecurityLog } from '../models/SecurityLog';
 import { sendSuccess, sendError } from '../utils/response';
 import { logError } from '../utils/logger';
 import { AuthValidator } from '../validators/auth.validator';
-import type { AuthRequest } from '../types/auth-request';
+import { FlatRequest as Request, type AuthRequest } from '../types/auth-request';
 import { auditLogService } from '../services/auditLog.service';
 import type { AuditAction } from '../models/AuditLog';
 import { AppError } from '../middlewares/error.middleware';
@@ -45,7 +46,7 @@ const logAudit = (
   const { adminId, adminName, ipAddress } = getAdminCtx(req);
   auditLogService
     .createAuditLog({ adminId, adminName, action, ipAddress, ...opts })
-    .catch(() => {});
+    .catch(err => logError('감사 로그 기록 실패', err));
 };
 
 // ===== 사용자 관리 =====
@@ -182,6 +183,19 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
     const { id } = req.params;
     const updateData = req.body;
     const { roleId } = updateData;
+    const adminId = (req as unknown as AuthRequest).user?.id;
+
+    // 관리자가 자기 자신의 역할을 변경하거나 비활성화하는 것을 방지
+    if (adminId && adminId === id) {
+      if (roleId !== undefined && roleId !== 'admin') {
+        sendError(res, 400, '자기 자신의 역할을 변경할 수 없습니다.');
+        return;
+      }
+      if (updateData.isActive === false) {
+        sendError(res, 400, '자기 자신의 계정을 비활성화할 수 없습니다.');
+        return;
+      }
+    }
 
     if (roleId) {
       const role = await Role.findByPk(roleId);
@@ -212,6 +226,13 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
 export const deleteUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+    const adminId = (req as unknown as AuthRequest).user?.id;
+
+    if (adminId && adminId === id) {
+      sendError(res, 400, '자기 자신의 계정을 삭제할 수 없습니다.');
+      return;
+    }
+
     const result = await userService.deleteUser(id);
     logAudit(req, 'delete_user', { targetType: 'user', targetId: id });
     sendSuccess(res, result);
@@ -455,6 +476,63 @@ export const setEventPermissions = async (req: Request, res: Response): Promise<
   }
 };
 
+// ===== 엑셀 내보내기 헬퍼 =====
+
+interface SheetColumn {
+  label: string;
+  key: string;
+  width: number;
+}
+
+function xlsxHeaderCell(value: string, rgb: string): XLSX.CellObject {
+  return {
+    v: value,
+    t: 's',
+    s: {
+      font: { bold: true, color: { rgb: 'FFFFFF' } },
+      fill: { patternType: 'solid', fgColor: { rgb } },
+    },
+  };
+}
+
+function buildXlsxSheet(
+  columns: SheetColumn[],
+  rows: Record<string, string>[],
+  headerRgb: string
+): XLSX.WorkSheet {
+  const ws: XLSX.WorkSheet = {};
+
+  columns.forEach(({ label }, ci) => {
+    ws[XLSX.utils.encode_cell({ r: 0, c: ci })] = xlsxHeaderCell(label, headerRgb);
+  });
+
+  rows.forEach((row, ri) => {
+    columns.forEach(({ key }, ci) => {
+      ws[XLSX.utils.encode_cell({ r: ri + 1, c: ci })] = { v: row[key] ?? '-', t: 's' };
+    });
+  });
+
+  ws['!cols'] = columns.map(({ width }) => ({ wch: width }));
+  ws['!ref'] = XLSX.utils.encode_range({
+    s: { r: 0, c: 0 },
+    e: { r: rows.length, c: columns.length - 1 },
+  });
+
+  return ws;
+}
+
+function sendXlsx(res: Response, ws: XLSX.WorkSheet, sheetName: string, filename: string): void {
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' }) as Buffer;
+  res.setHeader(
+    'Content-Type',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  );
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send(buf);
+}
+
 // ===== 엑셀 내보내기 =====
 export const exportUsersExcel = async (_req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -464,47 +542,28 @@ export const exportUsersExcel = async (_req: AuthRequest, res: Response): Promis
       order: [['createdAt', 'DESC']],
     });
 
-    const workbook = new ExcelJS.Workbook();
-    workbook.creator = '시스템';
-    workbook.created = new Date();
-
-    const sheet = workbook.addWorksheet('사용자 목록');
-    sheet.columns = [
-      { header: 'ID', key: 'id', width: 15 },
-      { header: '이름', key: 'name', width: 20 },
-      { header: '이메일', key: 'email', width: 30 },
-      { header: '역할', key: 'roleId', width: 12 },
-      { header: '활성', key: 'isActive', width: 8 },
-      { header: '마지막 로그인', key: 'lastLoginAt', width: 22 },
-      { header: '가입일', key: 'createdAt', width: 22 },
+    const columns: SheetColumn[] = [
+      { label: 'ID', key: 'id', width: 15 },
+      { label: '이름', key: 'name', width: 20 },
+      { label: '이메일', key: 'email', width: 30 },
+      { label: '역할', key: 'roleId', width: 12 },
+      { label: '활성', key: 'isActive', width: 8 },
+      { label: '마지막 로그인', key: 'lastLoginAt', width: 22 },
+      { label: '가입일', key: 'createdAt', width: 22 },
     ];
 
-    sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    sheet.getRow(1).fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FF4F46E5' },
-    };
+    const rows = users.map(user => ({
+      id: user.id,
+      name: user.name,
+      email: user.email ?? '-',
+      roleId: user.roleId,
+      isActive: user.isActive ? '활성' : '비활성',
+      lastLoginAt: user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString('ko-KR') : '-',
+      createdAt: new Date(user.createdAt).toLocaleString('ko-KR'),
+    }));
 
-    users.forEach(user => {
-      sheet.addRow({
-        id: user.id,
-        name: user.name,
-        email: user.email ?? '-',
-        roleId: user.roleId,
-        isActive: user.isActive ? '활성' : '비활성',
-        lastLoginAt: user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString('ko-KR') : '-',
-        createdAt: new Date(user.createdAt).toLocaleString('ko-KR'),
-      });
-    });
-
-    res.setHeader(
-      'Content-Type',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    );
-    res.setHeader('Content-Disposition', `attachment; filename="users-${Date.now()}.xlsx"`);
-    await workbook.xlsx.write(res);
-    res.end();
+    const ws = buildXlsxSheet(columns, rows, '4F46E5');
+    sendXlsx(res, ws, '사용자 목록', `users-${Date.now()}.xlsx`);
   } catch (err) {
     logError('사용자 엑셀 내보내기 실패', err);
     sendError(res, 500, '엑셀 내보내기 실패');
@@ -518,49 +577,30 @@ export const exportSecurityLogsExcel = async (_req: AuthRequest, res: Response):
       limit: 10000,
     });
 
-    const workbook = new ExcelJS.Workbook();
-    workbook.creator = '시스템';
-    workbook.created = new Date();
-
-    const sheet = workbook.addWorksheet('보안 로그');
-    sheet.columns = [
-      { header: 'ID', key: 'id', width: 36 },
-      { header: '사용자 ID', key: 'userId', width: 15 },
-      { header: 'IP 주소', key: 'ipAddress', width: 18 },
-      { header: '액션', key: 'action', width: 20 },
-      { header: '메서드', key: 'method', width: 10 },
-      { header: '경로', key: 'route', width: 40 },
-      { header: '상태', key: 'status', width: 12 },
-      { header: '일시', key: 'createdAt', width: 22 },
+    const columns: SheetColumn[] = [
+      { label: 'ID', key: 'id', width: 36 },
+      { label: '사용자 ID', key: 'userId', width: 15 },
+      { label: 'IP 주소', key: 'ipAddress', width: 18 },
+      { label: '액션', key: 'action', width: 20 },
+      { label: '메서드', key: 'method', width: 10 },
+      { label: '경로', key: 'route', width: 40 },
+      { label: '상태', key: 'status', width: 12 },
+      { label: '일시', key: 'createdAt', width: 22 },
     ];
 
-    sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    sheet.getRow(1).fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FF1E40AF' },
-    };
+    const rows = logs.map(log => ({
+      id: log.id,
+      userId: log.userId ?? '-',
+      ipAddress: log.ipAddress ?? '-',
+      action: log.action,
+      method: log.method,
+      route: log.route,
+      status: log.status,
+      createdAt: log.createdAt ? new Date(log.createdAt).toLocaleString('ko-KR') : '-',
+    }));
 
-    logs.forEach(log => {
-      sheet.addRow({
-        id: log.id,
-        userId: log.userId ?? '-',
-        ipAddress: log.ipAddress ?? '-',
-        action: log.action,
-        method: log.method,
-        route: log.route,
-        status: log.status,
-        createdAt: log.createdAt ? new Date(log.createdAt).toLocaleString('ko-KR') : '-',
-      });
-    });
-
-    res.setHeader(
-      'Content-Type',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    );
-    res.setHeader('Content-Disposition', `attachment; filename="security-logs-${Date.now()}.xlsx"`);
-    await workbook.xlsx.write(res);
-    res.end();
+    const ws = buildXlsxSheet(columns, rows, '1E40AF');
+    sendXlsx(res, ws, '보안 로그', `security-logs-${Date.now()}.xlsx`);
   } catch (err) {
     logError('보안 로그 엑셀 내보내기 실패', err);
     sendError(res, 500, '엑셀 내보내기 실패');

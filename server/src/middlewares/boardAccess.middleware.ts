@@ -65,10 +65,18 @@ export const checkBoardAccess = (
 
       // 권한 정보: checkUserBoardPermission에서 이미 BoardAccess를 조회했으므로 재사용
       // (이중 DB 쿼리 방지)
+      // permissions가 없는 경우는 admin/개인 게시판처럼 BoardAccess 레코드가 없는 정상 케이스
+      if (!permissionCheck.permissions) {
+        logError('permissions 객체 없음 — BoardAccess 레코드 누락 가능성', null, {
+          userId,
+          boardType,
+          userRole,
+        });
+      }
       const permissions = permissionCheck.permissions ?? {
-        canRead: false,
-        canWrite: false,
-        canDelete: false,
+        canRead: true,
+        canWrite: requiredPermission === 'canWrite' || requiredPermission === 'canDelete',
+        canDelete: requiredPermission === 'canDelete',
       };
 
       // 요청 객체에 게시판 정보 추가

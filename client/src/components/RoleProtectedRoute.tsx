@@ -1,8 +1,9 @@
+import { type ReactElement } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../store/auth';
 
 interface Props {
-  children: JSX.Element;
+  children: ReactElement;
   allowedRoles: string[];
 }
 

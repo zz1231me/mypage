@@ -4,6 +4,24 @@ import { Request, Response, NextFunction } from 'express';
 import { RateLimitSettings } from '../models/RateLimitSettings';
 import { logInfo, logSuccess, logError, logWarning } from '../utils/logger';
 
+interface CreateRateLimitSettingsData {
+  category: string;
+  name: string;
+  description: string;
+  windowMs: number;
+  maxRequests: number;
+  enabled: boolean;
+  skipSuccessfulRequests: boolean;
+  skipFailedRequests: boolean;
+  message: string;
+  statusCode: number;
+  applyTo: string;
+  priority?: number;
+  whitelistIPs?: string;
+  blacklistIPs?: string;
+  headers?: string;
+}
+
 // ✅ 메모리 캐시로 성능 최적화
 interface RateLimitSettingsSnapshot {
   windowMs: number;
@@ -141,7 +159,7 @@ class DynamicRateLimitManager {
         });
 
         if (!existing) {
-          await RateLimitSettings.create(config as any);
+          await RateLimitSettings.create(config);
           logSuccess(`기본 Rate Limit 설정 생성: ${config.category}.${config.name}`);
           createdCount++;
         }
@@ -222,7 +240,7 @@ class DynamicRateLimitManager {
         error: setting.message,
         retryAfter: Math.ceil(setting.windowMs / 1000),
       },
-      standardHeaders: true,
+      standardHeaders: 'draft-6',
       legacyHeaders: false,
 
       // ✅ IP 기반 필터링
@@ -360,7 +378,7 @@ class DynamicRateLimitManager {
   }
 
   // ✅ 설정 생성
-  async createSettings(data: any): Promise<RateLimitSettings | null> {
+  async createSettings(data: CreateRateLimitSettingsData): Promise<RateLimitSettings | null> {
     try {
       const newSettings = await RateLimitSettings.create(data);
       await this.refreshCache();
@@ -420,7 +438,7 @@ export const dynamicRateLimit = async (req: Request, res: Response, next: NextFu
     // 여러 미들웨어 순차 실행
     let index = 0;
 
-    const runNext = (err?: any) => {
+    const runNext = (err?: unknown) => {
       if (err) return next(err);
 
       if (index >= middlewares.length) {

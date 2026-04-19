@@ -1,6 +1,6 @@
 {
-  "compilerOptions": { 
-    // ✅ TypeScript 5.8 최적화 설정
+  "compilerOptions": {
+    "ignoreDeprecations": "6.0",
     "target": "ES2022",
     "module": "commonjs",
     "lib": ["ES2022"],
@@ -9,6 +9,7 @@
     "rootDir": "./src",
     "baseUrl": "./src",
     "typeRoots": ["./node_modules/@types", "./src/types"],
+    "types": ["node", "jest"],
     "outDir": "./dist",
     
     // 모듈 해석
