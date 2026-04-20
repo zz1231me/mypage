@@ -1,7 +1,6 @@
 import { Op } from 'sequelize';
 import { Notification, NotificationType } from '../models/Notification';
 import { AppError } from '../middlewares/error.middleware';
-import { emitToUser } from '../utils/socketManager';
 import { invalidateCache } from '../utils/cache';
 
 export class NotificationService {
@@ -20,16 +19,6 @@ export class NotificationService {
       link: params.link || null,
       relatedId: params.relatedId || null,
       isRead: false,
-    });
-
-    emitToUser(params.userId, 'notification:new', {
-      id: notification.id,
-      type: notification.type,
-      message: notification.message,
-      link: notification.link,
-      relatedId: notification.relatedId,
-      isRead: false,
-      createdAt: notification.createdAt,
     });
 
     // 새 알림 생성 시 해당 사용자의 unread-count 캐시 무효화

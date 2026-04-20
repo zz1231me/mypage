@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import { useSocket } from './useSocket';
+import { useState } from 'react';
 
 interface RealtimeNotification {
   id: number;
@@ -12,26 +11,10 @@ interface RealtimeNotification {
 }
 
 export function useRealtimeNotifications() {
-  const { socket } = useSocket();
-  const [newNotification, setNewNotification] = useState<RealtimeNotification | null>(null);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [newNotification] = useState<RealtimeNotification | null>(null);
 
-  useEffect(() => {
-    if (!socket) return;
+  const clearNew = () => {};
+  const resetCount = () => {};
 
-    const handleNew = (notification: RealtimeNotification) => {
-      setNewNotification(notification);
-      setUnreadCount(c => c + 1);
-    };
-
-    socket.on('notification:new', handleNew);
-    return () => {
-      socket.off('notification:new', handleNew);
-    };
-  }, [socket]);
-
-  const clearNew = () => setNewNotification(null);
-  const resetCount = () => setUnreadCount(0);
-
-  return { newNotification, unreadCount, clearNew, resetCount };
+  return { newNotification, unreadCount: 0, clearNew, resetCount };
 }

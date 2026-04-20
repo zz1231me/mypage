@@ -1,11 +1,12 @@
 // PermissionManagement.tsx - 권한 관리 컴포넌트
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useBoardManagement } from '../../../hooks/admin/useBoardManagement';
 import { useRoleManagement } from '../../../hooks/admin/useRoleManagement';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { AdminSection } from '../common/AdminSection';
 import { PermissionGraph } from '../PermissionGraph';
+import { fetchWikiPermissions, updateWikiPermissions } from '../../../api/admin';
 
 export const PermissionManagement = () => {
   const {
@@ -21,10 +22,37 @@ export const PermissionManagement = () => {
   const { roles, fetchRoles, loading: loadingRoles } = useRoleManagement();
 
   const [showGraph, setShowGraph] = useState(false);
+  const [wikiRoles, setWikiRoles] = useState<string[]>([]);
+  const [wikiSaving, setWikiSaving] = useState(false);
+
+  const loadWikiPermissions = useCallback(async () => {
+    try {
+      const data = await fetchWikiPermissions();
+      setWikiRoles(data.roles ?? []);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const toggleWikiRole = async (roleId: string) => {
+    const next = wikiRoles.includes(roleId)
+      ? wikiRoles.filter(r => r !== roleId)
+      : [...wikiRoles, roleId];
+    setWikiSaving(true);
+    try {
+      const data = await updateWikiPermissions(next);
+      setWikiRoles(data.roles ?? next);
+    } catch {
+      // revert on error
+    } finally {
+      setWikiSaving(false);
+    }
+  };
 
   useEffect(() => {
     fetchBoards();
     fetchRoles();
+    loadWikiPermissions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -55,6 +83,42 @@ export const PermissionManagement = () => {
 
   return (
     <div className="space-y-8">
+      <AdminSection title="📝 위키 편집 권한 설정">
+        <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm bg-white dark:bg-slate-800">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              선택된 역할만 위키 페이지를 생성·수정·삭제할 수 있습니다.
+            </p>
+            <span className="text-sm px-3 py-1 rounded-full text-slate-500 bg-green-50">
+              {wikiSaving ? '💾 저장 중...' : '✅ 자동 저장됨'}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {roles.map(role => (
+              <label
+                key={role.id}
+                className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+              >
+                <input
+                  type="checkbox"
+                  checked={wikiRoles.includes(role.id)}
+                  onChange={() => toggleWikiRole(role.id)}
+                  disabled={wikiSaving}
+                  className="form-checkbox h-4 w-4 text-indigo-600 rounded focus:ring-indigo-500"
+                />
+                <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                  {role.name}
+                </span>
+              </label>
+            ))}
+          </div>
+          <div className="mt-4 text-xs text-slate-500">
+            💡 읽기는 모든 인증 사용자에게 허용됩니다. 이 설정은 쓰기(생성·수정·삭제)에만
+            적용됩니다.
+          </div>
+        </div>
+      </AdminSection>
+
       <AdminSection
         title="⚙️ 게시판별 권한 설정"
         actions={

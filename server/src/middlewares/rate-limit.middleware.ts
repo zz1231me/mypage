@@ -29,6 +29,24 @@ export const apiLimiter = rateLimit({
   },
 });
 
+// 토큰 갱신 전용 제한 (authLimiter와 분리)
+// - skipSuccessfulRequests 없음: 성공/실패 모두 카운트 (갱신 남용 방지)
+// - 15분에 30회: 정상 사용에서는 절대 초과 안 됨
+export const refreshLimiter = rateLimit({
+  windowMs: RATE_LIMIT.WINDOW_MS,
+  max: 30,
+  standardHeaders: 'draft-6',
+  legacyHeaders: false,
+  keyGenerator: req => `refresh:${ipKeyGenerator(req.ip ?? '')}`,
+  handler: (req, res) => {
+    logWarning('토큰 갱신 Rate limit 초과', { ip: req.ip });
+    res.status(429).json({
+      success: false,
+      message: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.',
+    });
+  },
+});
+
 // 로그인 API 특별 제한
 export const authLimiter = rateLimit({
   windowMs: RATE_LIMIT.WINDOW_MS,

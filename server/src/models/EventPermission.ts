@@ -47,7 +47,7 @@ export class EventPermission
   declare public readonly updatedAt: Date;
 
   // 관계 데이터
-  public role?: NonAttribute<RoleInstance>;
+  declare public role: NonAttribute<RoleInstance> | undefined;
 }
 
 // 모델 초기화

@@ -45,6 +45,7 @@ export const useAuthInit = () => {
         devLog('📡 /api/auth/me 호출 시작...');
 
         try {
+          // ✅ api 인스턴스 사용 → 419(토큰 만료) 시 인터셉터가 자동으로 갱신 후 재시도
           const response = await getCurrentUser();
           devLog('✅ /api/auth/me 응답 받음:', response);
 
@@ -52,80 +53,44 @@ export const useAuthInit = () => {
           const userData = response.data?.user;
           const tokenInfoData = response.data?.tokenInfo;
 
-          // ✅ 사용자 정보 설정
           if (userData) {
-            // ✅ 서버에서 tokenInfo를 반환하므로 이를 우선 사용
-            if (tokenInfoData) {
-              setUser(userData, tokenInfoData);
-              devLog('✅ 서버에서 받은 토큰 정보로 인증 성공:', userData.name);
-            } else {
-              // localStorage에서 토큰 정보 복원 시도 (fallback)
-              const storedTokenInfo = localStorage.getItem('tokenInfo');
-
-              if (storedTokenInfo) {
-                try {
-                  const tokenInfo = JSON.parse(storedTokenInfo);
-
-                  // ✅ Refresh Token이 유효한지만 체크
-                  if (tokenInfo.refreshTokenExpiry > Date.now()) {
-                    setUser(userData, tokenInfo);
-                    devLog('✅ 저장된 토큰 정보로 인증 성공:', userData.name);
-                  } else {
-                    devLog('⚠️ 저장된 Refresh Token 만료, 토큰 정보 없이 설정');
-                    setUser(userData);
-                  }
-                } catch (parseError) {
-                  devError('❌ 토큰 정보 파싱 실패:', parseError);
-                  localStorage.removeItem('tokenInfo'); // 손상된 데이터 제거
-                  setUser(userData);
-                }
-              } else {
-                // ✅ localStorage에 토큰 정보 없으면 사용자 정보만 설정
-                devLog('ℹ️ 저장된 토큰 정보 없음, 사용자 정보만 설정');
-                setUser(userData);
-              }
-            }
-
+            setUser(userData, tokenInfoData ?? undefined);
             devLog('✅ 인증 상태 복원 성공:', userData.name);
             devLog('🔐 사용자 역할:', userData.roleInfo?.name || '알 수 없음');
             return;
-          } else {
-            devWarn('⚠️ 서버 응답에 user 정보 없음');
-            clearUser();
           }
+
+          devWarn('⚠️ 서버 응답에 user 정보 없음');
+          clearUser();
         } catch (getCurrentError: unknown) {
           devError('❌ /api/auth/me 호출 실패:', getCurrentError);
 
-          // ✅ 401 또는 419 에러 → Access Token 만료, Refresh 시도
-          const axiosError = getCurrentError as { response?: { status?: number }; status?: number };
-          const statusCode = axiosError.response?.status || axiosError.status;
-          if (statusCode === 401 || statusCode === 419) {
-            devLog('🔄 Access Token 만료 감지, Refresh Token으로 갱신 시도...');
+          // ✅ 401: 쿠키에 access_token 자체가 없는 경우 → refresh 수동 시도
+          //    419: 인터셉터가 이미 처리했으나 갱신 실패 → 여기서는 재시도하지 않음
+          const axiosError = getCurrentError as { response?: { status?: number } };
+          const statusCode = axiosError.response?.status;
 
+          if (statusCode === 401) {
+            devLog('🔄 토큰 없음 감지, Refresh Token으로 직접 갱신 시도...');
             try {
               const refreshResponse = await refreshToken();
               devLog('✅ Refresh Token 응답 받음:', refreshResponse);
 
-              // sendSuccess 구조: { success, data: { user, tokenInfo } }
               const refreshUser = refreshResponse.data?.user;
               const refreshTokenInfo = refreshResponse.data?.tokenInfo;
               if (refreshUser && refreshTokenInfo) {
                 setUser(refreshUser, refreshTokenInfo);
                 devLog('✅ Refresh Token으로 인증 성공:', refreshUser.name);
                 return;
-              } else {
-                devWarn('⚠️ Refresh Token 응답에 user/tokenInfo 없음');
-                clearUser();
               }
+              devWarn('⚠️ Refresh Token 응답에 user/tokenInfo 없음');
+              clearUser();
             } catch (refreshError) {
               devError('❌ Refresh Token 갱신 실패:', refreshError);
-              // Refresh 실패 → 로그아웃
               clearUser();
-              return;
             }
           } else {
-            // ✅ 기타 에러 → 로그아웃
-            devLog('❌ 인증 실패, 로그아웃 처리');
+            devLog('❌ 인증 실패, 로그아웃 처리 (status:', statusCode, ')');
             clearUser();
           }
         }

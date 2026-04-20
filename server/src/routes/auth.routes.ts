@@ -19,7 +19,7 @@ import { authenticate } from '../middlewares/auth.middleware';
 import { uploadAvatar } from '../middlewares/upload/avatar'; // ✅ 직접 import
 import { getOwnSessions } from '../controllers/userSession.controller';
 
-import { authLimiter } from '../middlewares/rate-limit.middleware';
+import { authLimiter, refreshLimiter } from '../middlewares/rate-limit.middleware';
 import { validateBody } from '../middlewares/validate.middleware';
 import {
   loginSchema,
@@ -34,7 +34,7 @@ const router = Router();
 // 🔐 인증 관련 (엄격한 Rate Limiting + 입력값 검증 적용)
 router.post('/login', authLimiter, validateBody(loginSchema), login);
 router.post('/register', authLimiter, validateBody(registerSchema), register);
-router.post('/refresh', authLimiter, refreshToken);
+router.post('/refresh', refreshLimiter, refreshToken);
 router.post('/forgot-password', authLimiter, validateBody(forgotPasswordSchema), forgotPassword);
 router.post('/reset-password', authLimiter, validateBody(resetPasswordSchema), resetPassword);
 router.post('/logout', authenticate, logout);

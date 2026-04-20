@@ -5,7 +5,6 @@
 // ============================================================================
 
 import express from 'express';
-import { createServer } from 'http';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -21,11 +20,9 @@ import { validateEnv, env } from './config/env';
 validateEnv();
 
 // ✅ 유틸리티
-import { logger, requestLogger } from './utils/logger';
+import { logger, requestLogger, logError } from './utils/logger';
 import { getCacheStats } from './utils/cache';
-import { sendSuccess } from './utils/response';
-import { initSocketIO } from './utils/socketManager';
-
+import { sendSuccess, sendError } from './utils/response';
 // ✅ Swagger 설정
 import { swaggerSpec } from './config/swagger';
 
@@ -124,7 +121,6 @@ async function runLogCleanup(): Promise<void> {
 }
 
 const app = express();
-const httpServer = createServer((req, res) => app(req, res));
 const PORT = env.PORT;
 
 // ============================================================================
@@ -305,14 +301,15 @@ app.use(
   })
 );
 
-// CORS_ALLOW_ALL=true 이면 모든 origin 허용 (사내 인트라넷 전용 배포 시 사용)
+// CORS_ALLOW_ALL=true 이면 모든 origin 허용
+// nginx가 이미 IP 수준에서 외부를 차단하는 인트라넷 환경에서 권장
 const CORS_ALLOW_ALL = process.env.CORS_ALLOW_ALL === 'true';
 
 // 표준 사설망 IP 대역 (192.168.x.x / 10.x.x.x / 172.16-31.x.x)
 const PRIVATE_NETWORK_REGEX =
   /^https?:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(:\d+)?$/;
 
-// 회사 전용 IP 대역 패턴 — 환경변수로 추가 가능
+// 회사 전용 IP/hostname 패턴 — 환경변수로 추가 가능
 // 예: CORS_IP_PATTERN=^https?:\/\/20\.\d+\.\d+\.\d+(:\d+)?$
 const CORS_IP_PATTERN = process.env.CORS_IP_PATTERN
   ? new RegExp(process.env.CORS_IP_PATTERN)
@@ -329,23 +326,35 @@ const LOCALHOST_ORIGINS = [
   'http://127.0.0.1:8080',
 ];
 
-// 추가 허용 origin 목록 — 환경변수로 지정 (예: CORS_ORIGINS=https://example.com,http://10.0.1.5:8080)
+// 추가 허용 origin 목록 — 환경변수로 지정
+// 예: CORS_ORIGINS=https://example.com,http://myhome.local:8080
 const EXTRA_ORIGINS = (process.env.CORS_ORIGINS || '')
   .split(',')
   .map(o => o.trim())
   .filter(Boolean);
 
+/** origin 이 허용 목록에 속하는지 검사 */
+function isOriginAllowed(origin: string): boolean {
+  if (CORS_ALLOW_ALL) return true;
+  if (LOCALHOST_ORIGINS.includes(origin)) return true;
+  if (PRIVATE_NETWORK_REGEX.test(origin)) return true;
+  if (CORS_IP_PATTERN?.test(origin)) return true;
+  if (EXTRA_ORIGINS.includes(origin)) return true;
+  return false;
+}
+
 app.use(
   cors({
     origin: (origin, callback) => {
-      // origin 없는 요청(서버간 호출, curl 등) 허용
+      // origin 없는 요청 (서버 간 호출, curl, nginx 내부 프록시 등) 허용
       if (!origin) return callback(null, true);
-      // 전체 허용 모드 (사내 인트라넷 전용 환경)
-      if (CORS_ALLOW_ALL) return callback(null, true);
-      if (LOCALHOST_ORIGINS.includes(origin)) return callback(null, true);
-      if (PRIVATE_NETWORK_REGEX.test(origin)) return callback(null, true);
-      if (CORS_IP_PATTERN?.test(origin)) return callback(null, true);
-      if (EXTRA_ORIGINS.includes(origin)) return callback(null, true);
+
+      if (isOriginAllowed(origin)) {
+        return callback(null, true);
+      }
+
+      // 차단 — 로그에 origin 명시하여 디버깅 용이하게
+      logger.warn(`CORS 차단: ${origin}`);
       callback(new Error(`CORS 차단: ${origin}`));
     },
     credentials: true,
@@ -355,6 +364,9 @@ app.use(
     maxAge: 600,
   })
 );
+
+// ✅ app.use(cors()) 가 preflightContinue:false(기본값) 로 OPTIONS 응답을 이미 종료하므로
+//    별도의 app.options() 등록은 불필요. 잘못된 인자 없는 cors()는 모든 origin 허용 → 제거.
 
 app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -474,10 +486,42 @@ app.use(
   express.static(path.resolve(__dirname, '../uploads/avatars'), imageStaticOptions)
 );
 
-// ✅ 루트 경로 — 인증 없이 접근 가능한 공개 상태 확인용
-app.get('/', (_req, res) => {
-  res.json({ success: true, message: 'API 서버가 정상 작동 중입니다.', version: '1.0.0' });
-});
+// ✅ 클라이언트 빌드 서빙 (npm 프로덕션 모드 — 별도 정적 서버 불필요)
+// NODE_ENV !== 'development' 이고 client/dist가 존재하면 Express가 직접 서빙
+const clientDistPath = path.resolve(__dirname, '../../client/dist');
+const clientIndexPath = path.join(clientDistPath, 'index.html');
+const clientBuildExists = env.NODE_ENV !== 'development' && fs.existsSync(clientIndexPath);
+
+if (clientBuildExists) {
+  app.use(
+    express.static(clientDistPath, {
+      index: false,
+      maxAge: env.NODE_ENV === 'production' ? '1d' : 0,
+      etag: true,
+    })
+  );
+  // SPA 폴백: /api, /uploads 이외 모든 경로에 index.html 반환
+  // Express 5는 app.get(/regex/) 미지원 → app.use + path 검사 방식 사용
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
+      next();
+      return;
+    }
+    res.set('Cache-Control', 'no-store');
+    res.sendFile(clientIndexPath, err => {
+      if (err) {
+        logError('index.html 전송 실패', err);
+        sendError(res, 500, '클라이언트 파일을 불러올 수 없습니다.');
+      }
+    });
+  });
+  logger.info(`✅ 클라이언트 빌드 서빙 활성화: ${clientDistPath}`);
+} else {
+  // 클라이언트 빌드 없음(개발 모드 등) — API 상태 확인용 루트 엔드포인트
+  app.get('/', (_req, res) => {
+    res.json({ success: true, message: 'API 서버가 정상 작동 중입니다.', version: '1.0.0' });
+  });
+}
 
 app.get('/api/health', async (_req, res) => {
   const dbHealth = await checkDatabaseHealth();
@@ -554,12 +598,24 @@ if (env.NODE_ENV === 'development') {
     const imagePath = path.resolve(__dirname, '../uploads/images');
     const filePath = path.resolve(__dirname, '../uploads/files');
     const avatarPath = path.resolve(__dirname, '../uploads/avatars');
+    const listFiles = (dir: string) => {
+      try {
+        return fs.readdirSync(dir).slice(0, 20); // 최대 20개
+      } catch {
+        return [];
+      }
+    };
     sendSuccess(res, {
       paths: { images: imagePath, files: filePath, avatars: avatarPath },
       exists: {
         images: fs.existsSync(imagePath),
         files: fs.existsSync(filePath),
         avatars: fs.existsSync(avatarPath),
+      },
+      files: {
+        images: listFiles(imagePath),
+        files: listFiles(filePath),
+        avatars: listFiles(avatarPath),
       },
     });
   });
@@ -656,14 +712,11 @@ const startServer = async () => {
       24 * 60 * 60 * 1000
     );
 
-    initSocketIO(httpServer);
-
-    httpServer.listen(PORT, '0.0.0.0', () => {
+    app.listen(PORT, '0.0.0.0', () => {
       logger.info(`🚀 API 서버 시작: http://0.0.0.0:${PORT}`);
       logger.info(`   📍 로컬 접속: http://127.0.0.1:${PORT}`);
       logger.info(`   📍 로컬 접속: http://localhost:${PORT}`);
       logger.info('   ✅ 통합 업로드 미들웨어 활성화');
-      logger.info('   ✅ Socket.IO 실시간 알림 활성화');
       logger.info('');
       logger.info(
         '📌 기본 관리자 계정: ID=admin (비밀번호는 환경변수 ADMIN_DEFAULT_PASSWORD 참조)'

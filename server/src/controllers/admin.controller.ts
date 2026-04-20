@@ -11,11 +11,13 @@ import { User } from '../models/User';
 import { SecurityLog } from '../models/SecurityLog';
 import { sendSuccess, sendError } from '../utils/response';
 import { logError } from '../utils/logger';
+import { invalidateCache } from '../utils/cache';
 import { AuthValidator } from '../validators/auth.validator';
 import { FlatRequest as Request, type AuthRequest } from '../types/auth-request';
 import { auditLogService } from '../services/auditLog.service';
 import type { AuditAction } from '../models/AuditLog';
 import { AppError } from '../middlewares/error.middleware';
+import { SiteSettings } from '../models/SiteSettings';
 
 function toAppError(err: unknown): AppError | null {
   return err instanceof AppError ? err : null;
@@ -402,6 +404,7 @@ export const setBoardAccessPermissions = async (req: Request, res: Response): Pr
     const { boardId } = req.params;
     const { permissions } = req.body;
     await roleService.setBoardAccessPermissions(boardId, permissions);
+    invalidateCache('boards');
     logAudit(req, 'update_permission', {
       targetType: 'board',
       targetId: boardId,
@@ -473,6 +476,42 @@ export const setEventPermissions = async (req: Request, res: Response): Promise<
   } catch (error) {
     logError('이벤트 권한 설정 실패', error);
     sendError(res, 500, '이벤트 권한 설정 실패');
+  }
+};
+
+// ===== 위키 권한 관리 =====
+
+export const getWikiPermissions = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const settings = await SiteSettings.findOne();
+    const roles: string[] = settings?.wikiEditRoles
+      ? (JSON.parse(settings.wikiEditRoles) as string[])
+      : ['admin', 'manager'];
+    sendSuccess(res, { roles });
+  } catch (error) {
+    logError('위키 권한 조회 실패', error);
+    sendError(res, 500, '위키 권한 조회 실패');
+  }
+};
+
+export const setWikiPermissions = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { roles } = req.body as { roles: unknown };
+    if (!Array.isArray(roles) || roles.some(r => typeof r !== 'string')) {
+      sendError(res, 400, '역할 배열(문자열)이 필요합니다.');
+      return;
+    }
+    const settings = await SiteSettings.findOne();
+    if (!settings) {
+      sendError(res, 500, '사이트 설정을 찾을 수 없습니다.');
+      return;
+    }
+    settings.wikiEditRoles = JSON.stringify(roles);
+    await settings.save();
+    sendSuccess(res, { roles }, '위키 편집 권한 설정 완료');
+  } catch (error) {
+    logError('위키 권한 설정 실패', error);
+    sendError(res, 500, '위키 권한 설정 실패');
   }
 };
 

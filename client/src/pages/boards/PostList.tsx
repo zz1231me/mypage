@@ -6,6 +6,7 @@ import { getTags } from '../../api/tags';
 import { checkUserBoardAccess } from '../../api/boards';
 import { useAuth } from '../../store/auth';
 import { Post, BoardInfo, PaginationInfo, Tag } from '../../types/board.types';
+import axios from 'axios';
 import { boardLogger } from '../../utils/logger';
 import { formatRelativeDate } from '../../utils/date';
 import { getBoardTitle } from '../../constants/boardTitles';
@@ -198,6 +199,8 @@ const PostList = () => {
           setPagination(postResponse.pagination);
         }
       } catch (err) {
+        if (axios.isCancel(err)) return;
+
         boardLogger.error('게시글 불러오기 실패', err);
 
         if (isMounted) {

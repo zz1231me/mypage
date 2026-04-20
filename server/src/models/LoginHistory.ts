@@ -19,15 +19,15 @@ export class LoginHistory
   extends Model<LoginHistoryAttributes, LoginHistoryCreationAttributes>
   implements LoginHistoryAttributes
 {
-  public id!: string;
-  public userId?: string | null;
-  public userName?: string | null;
-  public userRole?: string | null;
-  public ipAddress?: string | null;
-  public userAgent?: string | null;
-  public status!: 'success' | 'failed' | 'locked';
-  public failureReason?: string | null;
-  public readonly createdAt!: Date;
+  declare public id: string;
+  declare public userId: string | null | undefined;
+  declare public userName: string | null | undefined;
+  declare public userRole: string | null | undefined;
+  declare public ipAddress: string | null | undefined;
+  declare public userAgent: string | null | undefined;
+  declare public status: 'success' | 'failed' | 'locked';
+  declare public failureReason: string | null | undefined;
+  declare public readonly createdAt: Date;
 }
 
 LoginHistory.init(

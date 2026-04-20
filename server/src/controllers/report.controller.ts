@@ -41,8 +41,7 @@ export const createReport = async (req: AuthRequest, res: Response): Promise<voi
     sendValidationError(res, 'reason', '유효하지 않은 신고 사유입니다.');
     return;
   }
-  const parsedTargetId = parseInt(targetId, 10);
-  if (isNaN(parsedTargetId)) {
+  if (!targetId || typeof targetId !== 'string' || targetId.trim().length === 0) {
     sendValidationError(res, 'targetId', '유효하지 않은 대상 ID입니다.');
     return;
   }
@@ -55,11 +54,11 @@ export const createReport = async (req: AuthRequest, res: Response): Promise<voi
     const report = await reportService.createReport({
       reporterId,
       targetType: targetType as ReportTargetType,
-      targetId: parsedTargetId,
+      targetId,
       reason: reason as ReportReason,
       description,
     });
-    logInfo('신고 접수', { reporterId, targetType, targetId: parsedTargetId, reason });
+    logInfo('신고 접수', { reporterId, targetType, targetId, reason });
     sendSuccess(res, { id: report.id }, '신고가 접수되었습니다.', 201);
   } catch (err: unknown) {
     const appErr = err as { statusCode?: number; message?: string };

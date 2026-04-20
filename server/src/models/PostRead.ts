@@ -22,8 +22,20 @@ class PostReadModel extends Model<
 PostReadModel.init(
   {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-    PostId: { type: DataTypes.STRING(12), allowNull: false },
-    UserId: { type: DataTypes.STRING(50), allowNull: false },
+    PostId: {
+      type: DataTypes.STRING(12),
+      allowNull: false,
+      references: { model: 'Posts', key: 'id' },
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
+    },
+    UserId: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      references: { model: 'users', key: 'id' },
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
+    },
     readAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
     createdAt: { type: DataTypes.DATE, allowNull: false },
   },

@@ -118,8 +118,8 @@ class UserModel
   declare public posts?: NonAttribute<PostInstance[]>;
 
   // 관계 메서드 정의
-  public getPosts!: HasManyGetAssociationsMixin<PostInstance>;
-  public getRoleInfo!: BelongsToGetAssociationMixin<RoleInstance>;
+  declare public getPosts: HasManyGetAssociationsMixin<PostInstance>;
+  declare public getRoleInfo: BelongsToGetAssociationMixin<RoleInstance>;
 
   // ✅ 이미 해싱된 비밀번호를 저장할 때 beforeUpdate 훅이 재해싱하지 않도록 하는 플래그 (DB에 저장 안됨)
   public _skipPasswordHash = false;

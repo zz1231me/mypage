@@ -198,7 +198,7 @@ CommentModel.init(
     tableName: 'comments',
     timestamps: true,
     paranoid: true,
-    // ✅ 추가 옵션으로 명시적 설정
+    deletedAt: 'deletedAt',
     underscored: false,
     freezeTableName: true,
     indexes: [

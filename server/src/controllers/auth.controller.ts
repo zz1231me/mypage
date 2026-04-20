@@ -28,10 +28,13 @@ const setAuthCookies = (
   tokens: { accessToken: string; refreshToken?: string | null },
   oldRefreshToken?: string
 ) => {
+  // COOKIE_SECURE=true 일 때만 Secure 플래그 설정
+  // HTTPS 없이 HTTP만 쓰는 인트라넷 환경에서는 COOKIE_SECURE=false 로 설정
+  const isSecure = process.env.COOKIE_SECURE === 'true';
   const { jwtAccessTokenHours, jwtRefreshTokenDays } = getSettings();
   res.cookie('access_token', tokens.accessToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isSecure,
     sameSite: 'lax',
     maxAge: jwtAccessTokenHours * 60 * 60 * 1000,
     path: '/',
@@ -42,7 +45,7 @@ const setAuthCookies = (
   if (tokens.refreshToken && tokens.refreshToken !== oldRefreshToken) {
     res.cookie('refresh_token', tokens.refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isSecure,
       sameSite: 'lax',
       maxAge: jwtRefreshTokenDays * 24 * 60 * 60 * 1000,
       path: '/',

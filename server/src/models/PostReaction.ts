@@ -25,8 +25,20 @@ class PostReactionModel extends Model<
 PostReactionModel.init(
   {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-    PostId: { type: DataTypes.STRING(12), allowNull: false },
-    UserId: { type: DataTypes.STRING(50), allowNull: false },
+    PostId: {
+      type: DataTypes.STRING(12),
+      allowNull: false,
+      references: { model: 'Posts', key: 'id' },
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
+    },
+    UserId: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      references: { model: 'users', key: 'id' },
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
+    },
     type: { type: DataTypes.ENUM('like', 'love', 'haha', 'wow', 'sad', 'angry'), allowNull: false },
     createdAt: { type: DataTypes.DATE, allowNull: false },
     updatedAt: { type: DataTypes.DATE, allowNull: false },

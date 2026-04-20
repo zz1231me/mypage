@@ -11,7 +11,7 @@ export interface SecurityLogAttributes {
   userAgent: string;
   status: string;
   details?: any;
-  createdAt?: string;
+  createdAt?: Date;
 }
 
 export interface SecurityLogCreationAttributes extends Optional<SecurityLogAttributes, 'id'> {}
@@ -20,16 +20,16 @@ export class SecurityLog
   extends Model<SecurityLogAttributes, SecurityLogCreationAttributes>
   implements SecurityLogAttributes
 {
-  public id!: string;
-  public userId?: string | null;
-  public ipAddress!: string | null;
-  public action!: string;
-  public method!: string;
-  public route!: string;
-  public userAgent!: string;
-  public status!: string;
-  public details?: any;
-  public readonly createdAt!: string;
+  declare public id: string;
+  declare public userId: string | null | undefined;
+  declare public ipAddress: string | null;
+  declare public action: string;
+  declare public method: string;
+  declare public route: string;
+  declare public userAgent: string;
+  declare public status: string;
+  declare public details: any;
+  declare public readonly createdAt: Date;
 }
 
 SecurityLog.init(

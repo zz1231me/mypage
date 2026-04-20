@@ -22,18 +22,18 @@ export class ErrorLog
   extends Model<ErrorLogAttributes, ErrorLogCreationAttributes>
   implements ErrorLogAttributes
 {
-  public id!: string;
-  public userId?: string | null;
-  public userName?: string | null;
-  public userRole?: string | null;
-  public route!: string;
-  public method!: string;
-  public errorCode!: string;
-  public errorMessage!: string;
-  public errorStack?: string | null;
-  public severity!: 'info' | 'warning' | 'error' | 'critical';
-  public requestBody?: any;
-  public readonly createdAt!: Date;
+  declare public id: string;
+  declare public userId: string | null | undefined;
+  declare public userName: string | null | undefined;
+  declare public userRole: string | null | undefined;
+  declare public route: string;
+  declare public method: string;
+  declare public errorCode: string;
+  declare public errorMessage: string;
+  declare public errorStack: string | null | undefined;
+  declare public severity: 'info' | 'warning' | 'error' | 'critical';
+  declare public requestBody: any;
+  declare public readonly createdAt: Date;
 }
 
 ErrorLog.init(

@@ -25,6 +25,8 @@ import {
   updateEventAsAdmin,
   getEventPermissionsByRole,
   setEventPermissions,
+  getWikiPermissions,
+  setWikiPermissions,
   exportUsersExcel,
   exportSecurityLogsExcel,
 } from '../controllers/admin.controller';
@@ -89,6 +91,10 @@ router.put('/events/permissions', setEventPermissions as RequestHandler);
 router.get('/events', getAllEvents as RequestHandler);
 router.put('/events/:id', updateEventAsAdmin as RequestHandler);
 router.delete('/events/:id', deleteEventAsAdmin as RequestHandler);
+
+// ===== 위키 권한 관리 API =====
+router.get('/wiki/permissions', getWikiPermissions as RequestHandler);
+router.put('/wiki/permissions', setWikiPermissions as RequestHandler);
 
 // ===== 엑셀 내보내기 API =====
 router.get('/export/users', exportUsersExcel as RequestHandler);

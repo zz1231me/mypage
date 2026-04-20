@@ -1,6 +1,7 @@
 import { BaseService } from './base.service';
 import { Role, RoleInstance } from '../models/Role';
 import { BoardAccess } from '../models/BoardAccess';
+import EventPermission from '../models/EventPermission';
 import { AppError } from '../middlewares/error.middleware';
 import { sequelize } from '../config/sequelize';
 
@@ -60,9 +61,14 @@ export class RoleService extends BaseService {
       throw new AppError(404, '역할을 찾을 수 없습니다.');
     }
 
+    const t = await sequelize.transaction();
     try {
-      await role.destroy();
+      await BoardAccess.destroy({ where: { roleId: id }, transaction: t });
+      await EventPermission.destroy({ where: { roleId: id }, transaction: t });
+      await role.destroy({ transaction: t });
+      await t.commit();
     } catch (_error) {
+      await t.rollback();
       throw new AppError(500, '역할 삭제 실패');
     }
   }

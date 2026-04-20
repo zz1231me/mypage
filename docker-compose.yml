@@ -50,6 +50,11 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET must be set}
       ADMIN_DEFAULT_PASSWORD: ${ADMIN_DEFAULT_PASSWORD:-ChangeMe_2024!}
+      # HTTP만 사용하는 인트라넷 환경: false / HTTPS 사용 시: true
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      # nginx가 IP 수준에서 외부 접근을 이미 차단하므로 CORS는 전체 허용
+      # hostname 접근(예: http://myhome.local) 등 다양한 내부 접근 방식 대응
+      CORS_ALLOW_ALL: 'true'
     volumes:
       - uploads_data:/app/server/uploads
       - logs_data:/app/logs

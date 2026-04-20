@@ -26,8 +26,20 @@ class CommentReactionModel extends Model<
 CommentReactionModel.init(
   {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-    CommentId: { type: DataTypes.INTEGER, allowNull: false },
-    UserId: { type: DataTypes.STRING(50), allowNull: false },
+    CommentId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: { model: 'comments', key: 'id' },
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
+    },
+    UserId: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      references: { model: 'users', key: 'id' },
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
+    },
     type: {
       type: DataTypes.ENUM('like', 'love', 'haha', 'wow', 'sad', 'angry'),
       allowNull: false,

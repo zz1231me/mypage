@@ -45,3 +45,8 @@ export async function getWikiPageHistory(slug: string): Promise<WikiRevision[]> 
   const res = await api.get(`/wiki/${slug}/history`);
   return unwrap(res);
 }
+
+export async function getWikiEditPermissions(): Promise<{ roles: string[] }> {
+  const res = await api.get('/wiki/permissions');
+  return unwrap(res);
+}

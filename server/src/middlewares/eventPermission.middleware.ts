@@ -4,6 +4,7 @@ import { Role } from '../models/Role';
 import EventPermission from '../models/EventPermission';
 import { logInfo, logWarning, logError } from '../utils/logger';
 import { sendUnauthorized, sendForbidden, sendError } from '../utils/response';
+import { ROLES } from '../config/constants';
 
 export const checkEventPermission = (action: 'create' | 'read' | 'update' | 'delete') => {
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -16,6 +17,12 @@ export const checkEventPermission = (action: 'create' | 'read' | 'update' | 'del
       if (!userRole) {
         logWarning('이벤트 권한 체크: 사용자 역할 없음');
         sendUnauthorized(res, '로그인이 필요합니다.');
+        return;
+      }
+
+      // 관리자는 모든 이벤트 권한 허용
+      if (userRole === ROLES.ADMIN) {
+        next();
         return;
       }
 

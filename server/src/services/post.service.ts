@@ -277,7 +277,7 @@ export class PostService extends BaseService {
       },
       attributes: ['id', 'slug', 'title', 'content', 'createdAt'],
       order: [['updatedAt', 'DESC']],
-      limit: 5,
+      limit: getGlobalSearchLimit(),
     });
 
     const wikiResults = wikiPages.map(page => {
@@ -314,7 +314,7 @@ export class PostService extends BaseService {
       ],
       attributes: ['id', 'title', 'body', 'start', 'end', 'createdAt'],
       order: [['start', 'DESC']],
-      limit: 5,
+      limit: getGlobalSearchLimit(),
     });
 
     const eventResults = events.map(event => {
@@ -345,7 +345,7 @@ export class PostService extends BaseService {
       },
       attributes: ['id', 'title', 'content', 'createdAt'],
       order: [['updatedAt', 'DESC']],
-      limit: 5,
+      limit: getGlobalSearchLimit(),
     });
 
     const memoResults = memos.map(memo => {

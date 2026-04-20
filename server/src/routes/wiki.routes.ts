@@ -4,17 +4,22 @@ import {
   getPageTree,
   getPageBySlug,
   getPageHistory,
+  getWikiEditPermissions,
   createPage,
   updatePage,
   deletePage,
 } from '../controllers/wiki.controller';
 import { authenticate } from '../middlewares/auth.middleware';
-import { isAdminOrManager } from '../middlewares/isAdmin';
+import { checkWikiWritePermission } from '../middlewares/wikiPermission';
 import { AuthRequest } from '../types/auth-request';
 
 const router = Router();
 router.use(authenticate as RequestHandler);
 
+router.get(
+  '/permissions',
+  asyncHandler((req, res) => getWikiEditPermissions(req as AuthRequest, res))
+);
 router.get(
   '/',
   asyncHandler((req, res) => getPageTree(req as AuthRequest, res))
@@ -25,22 +30,22 @@ router.get(
 );
 router.get(
   '/:slug/history',
-  isAdminOrManager as RequestHandler,
+  checkWikiWritePermission as RequestHandler,
   asyncHandler((req, res) => getPageHistory(req as AuthRequest, res))
 );
 router.post(
   '/',
-  isAdminOrManager as RequestHandler,
+  checkWikiWritePermission as RequestHandler,
   asyncHandler((req, res) => createPage(req as AuthRequest, res))
 );
 router.put(
   '/:slug',
-  isAdminOrManager as RequestHandler,
+  checkWikiWritePermission as RequestHandler,
   asyncHandler((req, res) => updatePage(req as AuthRequest, res))
 );
 router.delete(
   '/:slug',
-  isAdminOrManager as RequestHandler,
+  checkWikiWritePermission as RequestHandler,
   asyncHandler((req, res) => deletePage(req as AuthRequest, res))
 );
 

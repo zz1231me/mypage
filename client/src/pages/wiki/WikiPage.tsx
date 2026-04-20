@@ -7,6 +7,7 @@ import {
   createWikiPage,
   updateWikiPage,
   deleteWikiPage,
+  getWikiEditPermissions,
 } from '../../api/wiki';
 import { WikiSidebar } from './WikiSidebar';
 import { WikiDetail } from './WikiDetail';
@@ -20,9 +21,16 @@ const WikiPageRoute = () => {
   const navigate = useNavigate();
   const { getUserRole } = useAuth();
   const role = getUserRole();
-  const canEdit = role === 'admin' || role === 'manager';
+  const [allowedRoles, setAllowedRoles] = useState<string[]>(['admin', 'manager']);
+  const canEdit = role !== null && allowedRoles.includes(role);
 
   const { handleImageUpload } = useImageUpload();
+
+  useEffect(() => {
+    getWikiEditPermissions()
+      .then(data => setAllowedRoles(data.roles))
+      .catch(() => {});
+  }, []);
 
   const [allPages, setAllPages] = useState<WikiPageType[]>([]);
   const [currentPage, setCurrentPage] = useState<WikiPageType | null>(null);
@@ -262,6 +270,7 @@ const WikiPageRoute = () => {
           <WikiDetail
             page={currentPage}
             allPages={allPages}
+            canEdit={canEdit}
             onEdit={() => {
               setIsEditing(true);
               setIsCreating(false);

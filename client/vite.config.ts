@@ -56,8 +56,10 @@ export default defineConfig(({ mode }) => {
         'axios',
         'zustand',
         'lodash.throttle',
+        'fuzzysort',
+        'ckeditor5',
+        '@ckeditor/ckeditor5-react',
       ],
-      exclude: ['ckeditor5', '@ckeditor/ckeditor5-react'],
     },
 
     server: {
@@ -144,6 +146,19 @@ export default defineConfig(({ mode }) => {
       port: 8080,
       strictPort: true,
       cors: true,
+      // dev 서버와 동일한 proxy — npm run preview 시에도 API 요청이 Express로 전달됨
+      proxy: {
+        '/api': {
+          target: env.VITE_API_URL || 'http://127.0.0.1:4000',
+          changeOrigin: true,
+          secure: false,
+        },
+        '/uploads': {
+          target: env.VITE_API_URL || 'http://127.0.0.1:4000',
+          changeOrigin: true,
+          secure: false,
+        },
+      },
     },
 
     cacheDir: 'node_modules/.vite',

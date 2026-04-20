@@ -25,14 +25,14 @@ export class IpRule
   extends Model<IpRuleAttributes, IpRuleCreationAttributes>
   implements IpRuleAttributes
 {
-  public id!: string;
-  public type!: IpRuleType;
-  public ip!: string;
-  public description!: string | null;
-  public isActive!: boolean;
-  public createdBy!: string;
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+  declare public id: string;
+  declare public type: IpRuleType;
+  declare public ip: string;
+  declare public description: string | null;
+  declare public isActive: boolean;
+  declare public createdBy: string;
+  declare public readonly createdAt: Date;
+  declare public readonly updatedAt: Date;
 }
 
 IpRule.init(

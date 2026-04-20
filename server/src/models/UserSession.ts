@@ -19,15 +19,15 @@ export class UserSession
   extends Model<UserSessionAttributes, UserSessionCreationAttributes>
   implements UserSessionAttributes
 {
-  public id!: string;
-  public userId!: string;
-  public sessionToken!: string;
-  public ipAddress?: string | null;
-  public userAgent?: string | null;
-  public lastActiveAt!: Date;
-  public expiresAt!: Date;
-  public isActive!: boolean;
-  public readonly createdAt!: Date;
+  declare public id: string;
+  declare public userId: string;
+  declare public sessionToken: string;
+  declare public ipAddress: string | null | undefined;
+  declare public userAgent: string | null | undefined;
+  declare public lastActiveAt: Date;
+  declare public expiresAt: Date;
+  declare public isActive: boolean;
+  declare public readonly createdAt: Date;
 }
 
 UserSession.init(

@@ -20,8 +20,9 @@ export const useImageUpload = () => {
         });
 
         const data = res.data;
-        callback(data.imageUrl, '업로드된 이미지');
-        fileLogger.success('이미지 업로드 완료', { url: data.imageUrl });
+        const imageUrl = data.data?.imageUrl ?? data.imageUrl;
+        callback(imageUrl, '업로드된 이미지');
+        fileLogger.success('이미지 업로드 완료', { url: imageUrl });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         fileLogger.error('이미지 업로드 실패', err);

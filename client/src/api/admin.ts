@@ -72,3 +72,11 @@ export const fetchUserSessions = (userId: string) =>
 
 export const forceLogoutSession = (userId: string, sessionId: string): Promise<void> =>
   api.delete(`/admin/users/${userId}/sessions/${sessionId}`).then(() => undefined);
+
+// ─── 위키 권한 관리 ───────────────────────────────────────────────────────────
+
+export const fetchWikiPermissions = (): Promise<{ roles: string[] }> =>
+  api.get('/admin/wiki/permissions').then(unwrap);
+
+export const updateWikiPermissions = (roles: string[]): Promise<{ roles: string[] }> =>
+  api.put('/admin/wiki/permissions', { roles }).then(unwrap);

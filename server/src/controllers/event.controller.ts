@@ -228,6 +228,10 @@ export const updateEvent = async (
     const updatedEvent = await Event.findByPk(id, {
       include: [{ model: User, as: 'user', attributes: ['id', 'name'] }],
     });
+    if (!updatedEvent) {
+      sendNotFound(res, '이벤트');
+      return;
+    }
 
     sendSuccess(res, updatedEvent, '이벤트가 수정되었습니다.');
   } catch (err) {

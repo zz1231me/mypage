@@ -25,7 +25,13 @@ class MemoModel extends Model<InferAttributes<MemoModel>, InferCreationAttribute
 MemoModel.init(
   {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-    UserId: { type: DataTypes.STRING(50), allowNull: false },
+    UserId: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      references: { model: 'users', key: 'id' },
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
+    },
     title: { type: DataTypes.STRING(200), allowNull: true, defaultValue: '' },
     content: { type: DataTypes.TEXT, allowNull: true, defaultValue: '' },
     color: {

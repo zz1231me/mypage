@@ -362,9 +362,24 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
 
   const handleCopyAll = useCallback(async () => {
     const text = flattenCommentsText(commentTree).join('\n');
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        // HTTP 환경 폴백: textarea를 잠깐 생성해 execCommand 사용
+        const el = document.createElement('textarea');
+        el.value = text;
+        el.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0';
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // 복사 실패 시 조용히 무시 (권한 거부 등)
+    }
   }, [commentTree]);
 
   const newCommentLen = getTextLength(ops.newComment);

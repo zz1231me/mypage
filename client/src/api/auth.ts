@@ -52,21 +52,11 @@ export async function logout() {
 }
 
 // 👤 현재 사용자 정보 조회
+// ✅ api 인스턴스 사용: 419(토큰 만료) 시 axios 인터셉터가 자동으로 갱신 후 재시도
+//    401(토큰 없음)은 AUTH_ENDPOINT 예외 처리로 리다이렉트 없이 에러 전파 → useAuthInit에서 수동 처리
 export async function getCurrentUser() {
-  const res = await fetch('/api/auth/me', {
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!res.ok) {
-    const errorText = await res.text();
-    devLog('❌ /api/auth/me 에러 응답:', errorText);
-    throw new Error(`사용자 정보 조회 실패: ${res.status}`);
-  }
-
-  return res.json();
+  const res = await api.get('/auth/me');
+  return res.data;
 }
 
 // 🔄 토큰 갱신
@@ -83,7 +73,10 @@ export async function refreshToken() {
   if (!res.ok) {
     const errorText = await res.text();
     devLog('❌ /api/auth/refresh 에러 응답:', errorText);
-    throw new Error(`토큰 갱신 실패: ${res.status}`);
+    const err = Object.assign(new Error(`토큰 갱신 실패: ${res.status}`), {
+      status: res.status,
+    });
+    throw err;
   }
 
   return res.json();

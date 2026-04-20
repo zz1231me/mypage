@@ -5,6 +5,20 @@ import { logError } from '../utils/logger';
 import { wikiService } from '../services/wiki.service';
 import { AppError } from '../middlewares/error.middleware';
 import { isAdminOrManager } from '../config/constants';
+import { SiteSettings } from '../models/SiteSettings';
+
+export const getWikiEditPermissions = async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const settings = await SiteSettings.findOne();
+    const roles: string[] = settings?.wikiEditRoles
+      ? (JSON.parse(settings.wikiEditRoles) as string[])
+      : ['admin', 'manager'];
+    sendSuccess(res, { roles });
+  } catch (err) {
+    logError('위키 편집 권한 조회 실패', err);
+    sendError(res, 500, '위키 편집 권한 조회 중 오류가 발생했습니다.');
+  }
+};
 
 export const getPageHistory = async (req: AuthRequest, res: Response): Promise<void> => {
   try {

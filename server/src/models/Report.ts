@@ -16,7 +16,7 @@ export type ReportStatus = 'pending' | 'reviewed' | 'dismissed' | 'action_taken'
 export class Report extends Model<InferAttributes<Report>, InferCreationAttributes<Report>> {
   declare public id: CreationOptional<number>;
   declare public targetType: ReportTargetType;
-  declare public targetId: number;
+  declare public targetId: string;
   declare public reporterId: ForeignKey<string | null>;
   declare public reason: ReportReason;
   declare public description: CreationOptional<string | null>;
@@ -35,7 +35,7 @@ Report.init(
       type: DataTypes.ENUM('post', 'comment'),
       allowNull: false,
     },
-    targetId: { type: DataTypes.INTEGER, allowNull: false },
+    targetId: { type: DataTypes.STRING(50), allowNull: false },
     reporterId: { type: DataTypes.STRING(50), allowNull: true },
     reason: {
       type: DataTypes.ENUM('spam', 'abuse', 'illegal', 'privacy', 'misinformation', 'other'),

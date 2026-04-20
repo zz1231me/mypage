@@ -1,7 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { WikiPage } from '../../types/wiki.types';
-import { useAuth } from '../../store/auth';
 import { sanitizeHTML } from '../../utils/htmlSanitizer';
 import { formatDate } from '../../utils/date';
 import { useContentImageHandler } from '../../hooks/useContentImageHandler';
@@ -15,16 +14,14 @@ import 'highlight.js/styles/atom-one-dark.min.css';
 interface WikiDetailProps {
   page: WikiPage;
   allPages: WikiPage[];
+  canEdit: boolean;
   onEdit: () => void;
 }
 
 // WikiDetail renders sanitized HTML content from the wiki page.
 // Content is processed through DOMPurify via sanitizeHTML before rendering.
-export const WikiDetail: React.FC<WikiDetailProps> = ({ page, allPages, onEdit }) => {
+export const WikiDetail: React.FC<WikiDetailProps> = ({ page, allPages, canEdit, onEdit }) => {
   const contentRef = useRef<HTMLDivElement>(null);
-  const { getUserRole } = useAuth();
-  const role = getUserRole();
-  const canEdit = role === 'admin' || role === 'manager';
   const { imageViewer, closeImageViewer } = useContentImageHandler();
   const [showHistory, setShowHistory] = useState(false);
 

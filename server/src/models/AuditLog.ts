@@ -42,19 +42,19 @@ export class AuditLog
   extends Model<AuditLogAttributes, AuditLogCreationAttributes>
   implements AuditLogAttributes
 {
-  public id!: string;
-  public adminId!: string;
-  public adminName!: string;
-  public action!: AuditAction;
-  public targetType!: AuditTargetType;
-  public targetId?: string | null;
-  public targetName?: string | null;
+  declare public id: string;
+  declare public adminId: string;
+  declare public adminName: string;
+  declare public action: AuditAction;
+  declare public targetType: AuditTargetType;
+  declare public targetId: string | null | undefined;
+  declare public targetName: string | null | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public beforeValue?: any;
+  declare public beforeValue: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public afterValue?: any;
-  public ipAddress?: string | null;
-  public readonly createdAt!: Date;
+  declare public afterValue: any;
+  declare public ipAddress: string | null | undefined;
+  declare public readonly createdAt: Date;
 }
 
 AuditLog.init(

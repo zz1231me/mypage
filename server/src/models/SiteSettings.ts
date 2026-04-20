@@ -58,6 +58,7 @@ export interface SiteSettingsInstance extends Model<
   rateLimitDownloadMax: CreationOptional<number>;
   autoSaveIntervalSeconds: CreationOptional<number>;
   draftExpiryMinutes: CreationOptional<number>;
+  wikiEditRoles: CreationOptional<string>;
   createdAt: CreationOptional<Date>;
   updatedAt: CreationOptional<Date>;
 }
@@ -115,6 +116,7 @@ export class SiteSettings
   declare public rateLimitDownloadMax: CreationOptional<number>;
   declare public autoSaveIntervalSeconds: CreationOptional<number>;
   declare public draftExpiryMinutes: CreationOptional<number>;
+  declare public wikiEditRoles: CreationOptional<string>;
   declare public readonly createdAt: Date;
   declare public readonly updatedAt: Date;
 }
@@ -404,6 +406,12 @@ SiteSettings.init(
       allowNull: false,
       defaultValue: 60,
       field: 'draft_expiry_minutes',
+    },
+    wikiEditRoles: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+      defaultValue: JSON.stringify(['admin', 'manager']),
+      field: 'wiki_edit_roles',
     },
     createdAt: {
       type: DataTypes.DATE,

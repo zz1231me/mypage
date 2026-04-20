@@ -11,7 +11,7 @@ export class ReportService extends BaseService {
   async createReport(params: {
     reporterId: string;
     targetType: ReportTargetType;
-    targetId: number;
+    targetId: string;
     reason: ReportReason;
     description?: string;
   }): Promise<Report> {
@@ -154,7 +154,7 @@ export class ReportService extends BaseService {
   }
 
   // 특정 게시글/댓글에 달린 신고 수 조회
-  async getTargetReportCount(targetType: ReportTargetType, targetId: number): Promise<number> {
+  async getTargetReportCount(targetType: ReportTargetType, targetId: string): Promise<number> {
     return Report.count({
       where: {
         targetType,
